@@ -317,6 +317,96 @@ body {
 
 /* ---------- Phrase cards ---------- */
 
+/* ---------- Daily reminder banner ---------- */
+
+.banner-wrap {
+  position: fixed; z-index: 60;
+  top: max(env(safe-area-inset-top), 10px); left: 10px; right: 10px;
+  display: flex; justify-content: center;
+  pointer-events: none;
+}
+.banner {
+  pointer-events: auto;
+  width: 100%; max-width: 500px;
+  display: flex; align-items: stretch; gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(60, 40, 100, 0.22);
+  overflow: hidden;
+  animation: drop 0.32s cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+@keyframes drop { from { transform: translateY(-120%); opacity: 0; } }
+
+.banner-main {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 12px;
+  background: transparent; border: none; cursor: pointer;
+  padding: 13px 6px 13px 14px; text-align: left; font-family: inherit; color: var(--ink);
+}
+.banner-icon {
+  width: 42px; height: 42px; flex: 0 0 42px;
+  display: grid; place-items: center; font-size: 22px;
+  background: linear-gradient(135deg, var(--sun), var(--primary));
+  border-radius: 13px;
+}
+.banner-text { min-width: 0; }
+.banner-title { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
+.banner-word { font-size: 16.5px; font-weight: 750; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.banner-sub { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+.banner-x {
+  flex: 0 0 auto; background: transparent; border: none; cursor: pointer;
+  color: var(--ink-soft); font-size: 15px; padding: 0 16px; font-family: inherit;
+}
+.banner-x:hover { color: var(--ink); }
+
+/* ---------- Settings: toggle switch ---------- */
+
+.set-row { display: flex; align-items: flex-start; gap: 14px; }
+.set-label { flex: 1; min-width: 0; }
+.set-title { margin: 0 0 4px; }
+.set-hint { margin: 0; }
+.set-sub { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.set-sub .label { margin-top: 0; }
+
+.switch {
+  flex: 0 0 auto;
+  width: 52px; height: 31px;
+  border-radius: 20px;
+  border: none;
+  background: var(--line);
+  cursor: pointer;
+  padding: 3px;
+  transition: background 0.18s ease;
+  display: flex; align-items: center;
+}
+.switch-on { background: var(--mint); }
+.switch-knob {
+  width: 25px; height: 25px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.18s ease;
+}
+.switch-on .switch-knob { transform: translateX(21px); }
+
+.field-time { max-width: 160px; }
+
+/* ---------- Library filters ---------- */
+
+.lib-controls { margin-bottom: 14px; }
+.lib-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.field-search { margin-bottom: 0; }
+.field-select {
+  padding: 12px 10px; font-size: 14px;
+  appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% + 2px), calc(100% - 11px) calc(50% + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+.lib-controls .btn-block { margin-top: 8px; }
+
 /* ---------- Expandable word cards ---------- */
 
 .word-head-main { min-width: 0; }

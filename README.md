@@ -5,10 +5,10 @@ to bring it to life, plus a checklist so you always know which words you've
 started and which you haven't.
 
 Built for parents who want **a little structure** instead of winging it. You
-enter your baby's date of birth once; the app maps their age to a
-developmental **stage** and serves a word each day that suits where their
-brain actually is — from newborn "parentese" exposure, through babbling and
-first words, all the way to sentences and "why?".
+enter your baby's date of birth once; the app maps their age to a **monthly
+plan** and serves a word each day that suits where their brain actually is —
+from newborn "parentese" exposure, through babbling and first words, all the
+way to sentences and "why?".
 
 > **Not medical advice.** Guidance here is general and milestone-based. Every
 > baby develops at their own pace — check with your paediatrician or a
@@ -48,13 +48,35 @@ separately. You mark one off when *they* say it.
 Teaching → Mastered*, so you never lose track or wonder whether you're
 repeating yourself.
 
-**Library** — browse all 37 months; look ahead or revisit.
+**A daily reminder banner** — an iOS-style banner when you open the app, once a
+day, showing the word of the day. Switch it on/off in Settings and choose the
+time it starts appearing from. (It's an in-app banner, not a lock-screen
+notification — see the note below.)
+
+**Library with search and filters** — browse all 37 months, or search all 365
+words and filter by category or speech sound. This is the fastest answer to
+"have I already done *dog*?" — results show which month each word belongs to
+and whether you've taught it.
+
+**Every word opens up** — cards in Plan and Library start collapsed and expand
+on tap to the full pronunciation coaching and activities. On the Dashboard,
+tapping a speech sound lists every word that practises it, and tapping anything
+in "recently worked on" reopens its card.
 
 **Private by default** — everything stays on the device. Export/import your
 progress as JSON to back it up or move devices.
 
 **Installable & offline** — it's a PWA: "Add to Home Screen" on an iPhone and
 it runs full-screen with no browser chrome, even with no signal.
+
+> **On the daily reminder:** a web app on iOS cannot schedule a notification
+> that fires while it is closed — there is no local-notification API, and the
+> Notification Triggers proposal never shipped. So the reminder is an in-app
+> banner: it appears the first time you open the app after your chosen time.
+> A real lock-screen reminder needs the native build, which is a few lines with
+> Capacitor's Local Notifications plugin — see [MIGRATION.md](MIGRATION.md).
+> The settings the banner already stores (`dailyBanner`, `bannerTime`) are
+> exactly what that scheduler needs.
 
 ## The curriculum
 
@@ -156,7 +178,8 @@ App Store checklist, data-model portability notes, and a phased roadmap.
 - Regional pronunciations — currently Southern British only, so Northern
   English (`bath` /bæθ/), Scottish, Irish, American and Australian speakers
   will find some transcriptions don't match their own accent
-- Daily local notification ("Today's word is ready 👶")
+- True lock-screen daily notification (the in-app banner ships today; the
+  scheduled version needs the native build)
 - Red-flag guidance: when to seek professional advice
 - Photos: let parents snap the real-world object they pointed at
 - Multiple children / profiles

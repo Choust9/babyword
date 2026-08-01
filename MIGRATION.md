@@ -58,9 +58,32 @@ and bundle identifier, and hit Run.
   [Preferences](https://capacitorjs.com/docs/apis/preferences) plugin — the API
   shape in `storage.js` was kept deliberately small to make this a one-file
   change.
-- **Daily notifications**: add
+- **Daily notifications**: the app already has the reminder *settings* and an
+  in-app banner; what a web app cannot do is fire a notification while it is
+  closed. Add
   [`@capacitor/local-notifications`](https://capacitorjs.com/docs/apis/local-notifications)
-  and schedule a "Today's word is ready" reminder — a few lines in `app.js`.
+  and schedule a repeating daily notification from the stored settings:
+
+  ```js
+  import { LocalNotifications } from '@capacitor/local-notifications';
+
+  const { dailyBanner, bannerTime } = Store.loadState().settings;
+  await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+  if (dailyBanner) {
+    const [hour, minute] = bannerTime.split(':').map(Number);
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 1,
+        title: "Today's word is ready",
+        body: `${word.w} — ${word.say}`,
+        schedule: { on: { hour, minute }, repeats: true },
+      }],
+    });
+  }
+  ```
+
+  Re-run this whenever the toggle or time changes, and hide the in-app banner
+  once the native notification is doing the job.
 
 ### Keeping the repo tidy
 

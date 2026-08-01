@@ -72,7 +72,8 @@
       else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
       else node.setAttribute(k, v);
     }
-    for (const c of children.flat()) {
+    // flat(Infinity): callers nest arrays of nodes freely (lists inside lists).
+    for (const c of children.flat(Infinity)) {
       if (c === null || c === undefined || c === false) continue;
       node.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
     }
@@ -106,6 +107,50 @@
   const backModal = () => { modalStack.pop(); render(); };
   const closeModals = () => { modalStack = []; render(); };
 
+  // ---- Daily reminder banner ---------------------------------------------
+
+  const localDate = (d = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const minutesNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+
+  function minutesOf(hhmm) {
+    const [h, m] = String(hhmm || '09:00').split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }
+
+  // Show once per day, from the chosen time onwards, until dismissed.
+  function bannerDue() {
+    const s = state.settings || {};
+    if (!s.dailyBanner) return false;
+    if (s.bannerDismissed === localDate()) return false;
+    return minutesNow() >= minutesOf(s.bannerTime);
+  }
+
+  function dismissBanner() {
+    Store.setSetting(state, 'bannerDismissed', localDate());
+    render();
+  }
+
+  function renderBanner(plan) {
+    if (!bannerDue()) return null;
+    const word = wordOfTheDay(plan);
+    const open = () => { activeTab = 'today'; dismissBanner(); };
+
+    return el('div', { class: 'banner-wrap', role: 'status' },
+      el('div', { class: 'banner' },
+        el('button', {
+          class: 'banner-main', onclick: open,
+          'aria-label': `Today's word is ${word.w}. Open it.`,
+        },
+          el('div', { class: 'banner-icon', 'aria-hidden': 'true' }, '🍼'),
+          el('div', { class: 'banner-text' },
+            el('div', { class: 'banner-title' }, "Today's word is ready"),
+            el('div', { class: 'banner-word' }, `${word.w} · ${word.say}`),
+            el('div', { class: 'banner-sub' }, `Month ${plan.m} · tap to open`))),
+        el('button', { class: 'banner-x', onclick: dismissBanner, 'aria-label': 'Dismiss for today' }, '✕')));
+  }
+
   function render() {
     // The page behind the sheet is scroll-locked, so remember where the user
     // was and put them back there when the sheet closes.
@@ -116,6 +161,10 @@
     app.appendChild(state.baby ? renderHome() : renderOnboarding());
     const sheet = renderModal();
     if (sheet) app.appendChild(sheet);
+    if (state.baby && !modalStack.length) {
+      const banner = renderBanner(planForMonth(ageInMonths(state.baby.birthISO)));
+      if (banner) app.appendChild(banner);
+    }
 
     const isOpen = modalStack.length > 0;
     document.body.classList.toggle('modal-open', isOpen);
@@ -279,20 +328,43 @@
         el('button', { class: `btn ${status === 'mastered' ? 'btn-ghost' : 'btn-primary'}`, onclick: cycle }, actionLabel)));
   }
 
-  function renderPhraseCard(plan, phrase) {
+  function renderPhraseCard(plan, phrase, opts = {}) {
     const status = Store.getPhrase(state, plan.m, phrase.p).status || 'todo';
     const cycle = (e) => {
       if (e) e.stopPropagation();
       Store.setPhraseStatus(state, plan.m, phrase.p, nextStatus(status));
       render();
     };
-    return el('div', { class: 'card phrase-card' },
+    const key = `p:${Store.wordKey(plan.m, phrase.p)}`;
+    const open = !opts.expandable || expandedWords.has(key);
+    const toggle = () => {
+      if (expandedWords.has(key)) expandedWords.delete(key);
+      else expandedWords.add(key);
+      render();
+    };
+
+    const summary = el('div', {},
       el('div', { class: 'word-head' },
-        el('div', {},
+        el('div', { class: 'word-head-main' },
           el('div', { class: 'phrase-text' }, `“${phrase.p}”`),
           el('div', { class: 'phrase-pattern' }, phrase.pattern)),
-        statusPill(status)),
-      el('p', { class: 'word-why' }, phrase.tip),
+        statusPill(status)));
+
+    const header = opts.expandable
+      ? el('div', {
+          class: 'tap-region', role: 'button', tabindex: '0', 'aria-expanded': String(open),
+          'aria-label': `${phrase.p} — ${open ? 'hide' : 'show'} how to model it`,
+          onclick: toggle,
+          onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } },
+        }, summary)
+      : summary;
+
+    return el('div', { class: `card phrase-card ${open ? 'is-open' : ''}` },
+      header,
+      open ? el('p', { class: 'word-why' }, phrase.tip) : null,
+      opts.expandable
+        ? el('button', { class: 'disclosure', onclick: toggle }, open ? '▴ Hide details' : '▾ How to model it')
+        : null,
       el('button', { class: `btn btn-block ${status === 'mastered' ? 'btn-ghost' : 'btn-primary'}`, onclick: cycle },
         status === 'todo' ? '✋ Start modelling this' : status === 'teaching' ? '✓ They said it!' : '↺ Reset'));
   }
@@ -572,20 +644,85 @@
         ? el('div', {},
             el('h3', { class: 'section-title' }, 'Phrases to model'),
             el('p', { class: 'section-note' }, 'Say these back to your child with one extra word added. Mark one off when they use it themselves.'),
-            plan.phrases.map((p) => renderPhraseCard(plan, p)))
+            plan.phrases.map((p) => renderPhraseCard(plan, p, { expandable: true })))
         : null);
   }
 
   // ---- Library -----------------------------------------------------------
 
+  // Filters apply across the whole library; with none set we show one month.
+  let libQuery = '';
+  let libCategory = 'all';
+  let libSound = 'all';
+  const libFiltered = () => libQuery.trim() !== '' || libCategory !== 'all' || libSound !== 'all';
+
+  function libraryMatches() {
+    const q = libQuery.trim().toLowerCase();
+    const out = [];
+    for (const plan of MONTHS) {
+      for (const w of plan.words) {
+        if (libCategory !== 'all' && w.c !== libCategory) continue;
+        if (libSound !== 'all' && w.focus !== libSound) continue;
+        if (q && !(w.w.toLowerCase().includes(q) || w.c.toLowerCase().includes(q) || w.say.toLowerCase().includes(q))) continue;
+        out.push({ plan, w });
+      }
+    }
+    return out;
+  }
+
   function renderLibrary() {
+    const categories = [...new Set(MONTHS.flatMap((p) => p.words.map((w) => w.c)))].sort();
+
+    const search = el('input', {
+      type: 'search', class: 'field field-search', placeholder: 'Search all 365 words…',
+      value: libQuery,
+      oninput: (e) => {
+        libQuery = e.target.value;
+        // Re-render on the next tick so the input keeps focus and caret.
+        const pos = e.target.selectionStart;
+        render();
+        const box = document.querySelector('.field-search');
+        if (box) { box.focus(); box.setSelectionRange(pos, pos); }
+      },
+    });
+
+    const catSel = el('select', { class: 'field field-select', onchange: (e) => { libCategory = e.target.value; render(); } },
+      el('option', { value: 'all' }, 'All categories'),
+      categories.map((c) => el('option', { value: c, selected: libCategory === c ? 'selected' : null }, c)));
+
+    const soundSel = el('select', { class: 'field field-select', onchange: (e) => { libSound = e.target.value; render(); } },
+      el('option', { value: 'all' }, 'All sounds'),
+      Object.entries(PHONEMES).map(([k, p]) =>
+        el('option', { value: k, selected: libSound === k ? 'selected' : null }, `${p.ipa} — ${p.name}`)));
+
+    const controls = el('div', { class: 'lib-controls' },
+      search,
+      el('div', { class: 'lib-selects' }, catSel, soundSel),
+      libFiltered()
+        ? el('button', { class: 'btn btn-ghost btn-block', onclick: () => { libQuery = ''; libCategory = 'all'; libSound = 'all'; render(); } },
+            '✕ Clear filters')
+        : null);
+
+    // Filtered view: results from across every month.
+    if (libFiltered()) {
+      const hits = libraryMatches();
+      return el('div', {}, controls,
+        el('div', { class: 'tab-body' },
+          el('h3', { class: 'section-title' }, `${hits.length} match${hits.length === 1 ? '' : 'es'}`),
+          hits.length
+            ? [el('p', { class: 'section-note' }, 'Tap a word for how to say it and ways to teach it.'),
+               hits.map(({ plan, w }) => renderWordCard(plan, w, { expandable: true }))]
+            : el('p', { class: 'empty' }, 'No words match. Try a different search or clear the filters.')));
+    }
+
+    // Default view: browse a single month.
     const plan = planForMonth(browseMonth);
     const picker = el('div', { class: 'month-picker' },
       MONTHS.map((p) =>
         el('button', { class: `mpill ${browseMonth === p.m ? 'mpill-active' : ''}`,
           onclick: () => { browseMonth = p.m; render(); } }, String(p.m))));
 
-    return el('div', {},
+    return el('div', {}, controls,
       el('div', { class: 'picker-label' }, 'Browse by month'),
       picker,
       el('div', { class: 'tab-body' },
@@ -595,10 +732,57 @@
           el('div', { class: 'stage-focus' }, plan.focus)),
         el('p', { class: 'section-note' }, 'Tap a word for how to say it and ways to teach it.'),
         plan.words.map((w) => renderWordCard(plan, w, { expandable: true })),
-        (plan.phrases || []).map((p) => renderPhraseCard(plan, p))));
+        (plan.phrases || []).map((p) => renderPhraseCard(plan, p, { expandable: true }))));
   }
 
   // ---- Settings ----------------------------------------------------------
+
+  function renderReminderSettings() {
+    const s = state.settings || {};
+    const on = !!s.dailyBanner;
+
+    const toggle = el('button', {
+      class: `switch ${on ? 'switch-on' : ''}`, role: 'switch', 'aria-checked': String(on),
+      'aria-label': 'Daily reminder',
+      onclick: () => {
+        Store.setSetting(state, 'dailyBanner', !on);
+        // Turning it back on should let today's reminder appear again.
+        if (!on) Store.setSetting(state, 'bannerDismissed', null);
+        render();
+      },
+    }, el('span', { class: 'switch-knob' }));
+
+    const time = el('input', {
+      type: 'time', class: 'field field-time', value: s.bannerTime || '09:00',
+      onchange: (e) => {
+        Store.setSetting(state, 'bannerTime', e.target.value || '09:00');
+        Store.setSetting(state, 'bannerDismissed', null);
+        render();
+      },
+    });
+
+    const showAgain = s.bannerDismissed === localDate()
+      ? el('button', { class: 'btn btn-ghost btn-block', onclick: () => { Store.setSetting(state, 'bannerDismissed', null); render(); } },
+          '↺ Show today’s reminder again')
+      : null;
+
+    return el('div', { class: 'card' },
+      el('div', { class: 'set-row' },
+        el('div', { class: 'set-label' },
+          el('h3', { class: 'how-title set-title' }, '🔔 Daily reminder'),
+          el('p', { class: 'hint set-hint' }, 'A banner when you open the app, once a day, with the word of the day.')),
+        toggle),
+      on
+        ? el('div', { class: 'set-sub' },
+            el('label', { class: 'label' }, 'Show from'),
+            time,
+            el('p', { class: 'hint' },
+              'The banner appears the first time you open the app after this time each day. ' +
+              'It cannot ring or appear on your lock screen — a web app on iOS has no way to ' +
+              'schedule that. Lock-screen reminders arrive with the native build (see MIGRATION.md).'),
+            showAgain)
+        : null);
+  }
 
   function renderSettings() {
     const fileInput = el('input', { type: 'file', accept: 'application/json', class: 'hidden-file',
@@ -619,6 +803,7 @@
         el('p', { class: 'hint' }, `${state.baby.name} · born ${new Date(state.baby.birthISO).toLocaleDateString()} · ${ageLabel(state.baby.birthISO)}`),
         el('button', { class: 'btn btn-ghost btn-block', onclick: () => { state.baby = null; Store.saveState(state); render(); } },
           'Edit baby details')),
+      renderReminderSettings(),
       el('div', { class: 'card' },
         el('h3', { class: 'how-title' }, 'Your data'),
         el('p', { class: 'hint' }, 'Everything is stored privately on this device. Back it up or move it to a new device here.'),

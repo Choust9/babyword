@@ -17,22 +17,43 @@
 const STORAGE_KEY = 'babyWordOfTheDay.v2';
 const LEGACY_KEY = 'babyWordOfTheDay.v1';
 
+// User-configurable settings. `bannerDismissed` holds a YYYY-MM-DD stamp so the
+// daily reminder shows once per day and stays gone once dismissed.
+const DEFAULT_SETTINGS = {
+  dailyBanner: true,
+  bannerTime: '09:00',
+  bannerDismissed: null,
+};
+
 const DEFAULT_STATE = {
   baby: null,          // { name, birthISO }
   progress: {},        // word key -> record
   phrases: {},         // phrase key -> record
   history: {},         // dateISO -> word key surfaced that day
+  settings: null,      // filled from DEFAULT_SETTINGS on load
   createdISO: null,
 };
 
 function freshState() {
-  return { ...DEFAULT_STATE, progress: {}, phrases: {}, history: {}, createdISO: new Date().toISOString() };
+  return {
+    ...DEFAULT_STATE,
+    progress: {}, phrases: {}, history: {},
+    settings: { ...DEFAULT_SETTINGS },
+    createdISO: new Date().toISOString(),
+  };
+}
+
+// Merge stored state over the defaults, and settings separately so a state
+// saved before a new setting existed still picks up that setting's default.
+function hydrate(stored) {
+  const base = freshState();
+  return { ...base, ...stored, settings: { ...DEFAULT_SETTINGS, ...(stored.settings || {}) } };
 }
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...freshState(), ...JSON.parse(raw) };
+    if (raw) return hydrate(JSON.parse(raw));
 
     // One-time migration from the quarter-based v1 layout. v1 keys looked like
     // "babbling::Red"; we keep the baby profile and drop the stage-keyed
@@ -157,10 +178,16 @@ function monthProgress(state, plan) {
   return { mastered, teaching, total: plan.words.length };
 }
 
+function setSetting(state, key, value) {
+  state.settings = { ...state.settings, [key]: value };
+  saveState(state);
+  return state.settings;
+}
+
 function exportState(state) { return JSON.stringify(state, null, 2); }
 
 function importState(json) {
-  const merged = { ...freshState(), ...JSON.parse(json) };
+  const merged = hydrate(JSON.parse(json));
   saveState(merged);
   return merged;
 }
@@ -174,6 +201,6 @@ function resetState() {
 window.Store = {
   loadState, saveState, wordKey,
   getProgress, getPhrase, setStatus, setPhraseStatus,
-  summarise, monthProgress,
+  summarise, monthProgress, setSetting,
   exportState, importState, resetState,
 };
