@@ -34,8 +34,7 @@ become the app's UI unchanged.
 ### Steps
 
 ```bash
-# 1. From the repo root, add a package.json and Capacitor
-npm init -y
+# 1. From the repo root (a package.json already exists), add Capacitor
 npm install @capacitor/core @capacitor/cli @capacitor/ios
 npx cap init "Baby Word of the Day" com.yourname.babywords --web-dir .
 
@@ -139,6 +138,13 @@ Ship the contents of `data.js` and `phonics.js` as `curriculum.json` and
 `phonics.json` (trivial to derive — both are already plain data with no
 functions) and decode them. The models are intentionally the same shape, so the
 field names above match the JavaScript exactly.
+
+**Keep the localisation in mind when you port.** Transcriptions and respellings
+are British English (RP/SSBE) — see CONTENT-DESIGN.md §3. If you later add
+American or other regional pronunciations, add them as extra fields on `Word`
+(e.g. `ipaUS`, `sayUS`) selected by a user setting, rather than forking the
+curriculum. The `npm run check` validator enforces the British set today and
+would need extending alongside.
 
 ### Native features worth adding in Route B
 

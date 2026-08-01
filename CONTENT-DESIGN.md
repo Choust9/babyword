@@ -93,6 +93,43 @@ Every word declares a `focus` key naming the sound it was chosen to practise,
 and the app renders the coaching from the table. This keeps the word bank
 compact and the advice consistent.
 
+### Pronunciation variety: British English
+
+All 365 transcriptions are **British English — Received Pronunciation /
+Standard Southern British**, and the plain respellings assume a British reader.
+Three features of that choice shape the data:
+
+- **Non-rhotic.** `/r/` is written only where it is actually pronounced, which
+  in British English means *before a vowel only*. So `car` is `/kɑː/` with no
+  `/r/` at all, `farm` is `/fɑːm/`, and `water` is `/ˈwɔː.tə/` — but
+  intervocalic `/r/` is retained, so `story` is `/ˈstɔː.ri/`, `sorry` is
+  `/ˈsɒr.i/` and `tomorrow` is `/təˈmɒr.əʊ/`. This is a genuine trap when
+  converting from American sources: a blanket "drop the r" rule silently
+  deletes the `/r/` in exactly those words.
+- **The BATH/TRAP split.** BATH-set words take `/ɑː/` — `bath` `/bɑːθ/`,
+  `grass` `/ɡrɑːs/`, `ask` `/ɑːsk/`, `fast` `/fɑːst/`, `after` `/ˈɑːf.tə/`,
+  `banana` `/bəˈnɑː.nə/` — while TRAP words keep `/æ/` (`cat`, `hand`,
+  `splash`). Note `pasta` goes the *other* way: `/ˈpæs.tə/` in British English.
+- **LOT vs CLOTH vs PALM.** LOT words take `/ɒ/` (`hot` `/hɒt/`, `wash`
+  `/wɒʃ/`, `what` `/wɒt/`), and several words American English gives `/ɔː/`
+  are `/ɒ/` here too (`dog` `/dɒɡ/`, `song` `/sɒŋ/`, `soft` `/sɒft/`, `cross`
+  `/krɒs/`, `off` `/ɒf/`). PALM words keep `/ɑː/` (`calm`, `pyjamas`
+  `/pəˈdʒɑː.məz/`, and the babble syllables `ma-ma`, `ba-ba`).
+
+Other British conventions used: `/e/` rather than `/ɛ/` for DRESS (`red`
+`/red/`), `/əʊ/` rather than `/oʊ/` for GOAT (`nose` `/nəʊz/`), `/ɪə/` and
+`/eə/` for NEAR and SQUARE (`ear` `/ɪə/`, `chair` `/tʃeə/`), and `/r/` rather
+than `/ɹ/` for the r symbol.
+
+Respellings follow suit: `more` is "MAW" not "MOR", `car` is "KAH", `dog` is
+"DOG" not "DAWG". Where a British reader would naturally read a spelling
+correctly ("BATH", "GRASS", "FAST", "WAW-ter"), the respelling is left in the
+familiar form rather than made phonetically exotic.
+
+The `r` entry in `PHONEMES` also carries the non-rhotic rule explicitly, since
+it genuinely affects how a parent should model the sound: *"there is no 'r'
+sound in 'car' or 'farm', but there is one in 'carry' and 'rabbit'."*
+
 ### Age-of-acquisition bands
 
 Bands follow widely used English consonant norms (Sander, 1972; Crowe &
@@ -103,7 +140,7 @@ McLeod, 2020):
 | Early | m, b, p, n, d, w, h | by ~2 years |
 | Middle | t, k, g, f, ŋ, j | by ~3 years |
 | Later | s, z, l, ʃ, tʃ, dʒ, v | by ~4 years |
-| Latest | ɹ, θ, ð, ʒ | often 5–6 years |
+| Latest | r, θ, ð, ʒ | often 5–6 years |
 
 **These describe production, not comprehension.** Babies understand words
 containing late sounds long before they can say them, so the curriculum
@@ -171,9 +208,12 @@ Honest list of what this content still needs before a public release:
 - **No SLT sign-off yet.** The curriculum is structured and evidence-informed
   but has not been reviewed by a certified speech-language therapist. That
   review is the single most important step before shipping.
-- **General American IPA only.** Transcriptions do not cover British, Irish,
-  Australian or other varieties — several words (`bath`, `water`) differ
-  meaningfully. A locale-aware pronunciation set is needed.
+- **Southern British English only.** Transcriptions are RP/SSBE. They do not
+  cover American, Scottish, Irish, Northern English, Welsh or Australian
+  pronunciation, and several differ meaningfully — a Northern English speaker
+  says `bath` `/bæθ/` and `cup` `/kʊp/`, and American English is rhotic
+  throughout. A locale-aware pronunciation set is needed before shipping
+  outside the south of England.
 - **English monolingual.** No bilingual or ESL guidance yet, despite bilingual
   households being extremely common.
 - **Milestones are population ranges.** They are presented as "many babies"
@@ -195,7 +235,7 @@ To add a word, append to the relevant month's `words` array in `js/data.js`:
 {
   w: 'Kettle',            // the word
   c: 'Home',              // category (reuse an existing one where possible)
-  ipa: '/ˈkɛt.əl/',       // broad transcription, General American
+  ipa: '/ˈket.əl/',       // broad transcription, British English (RP)
   say: 'KET-ul',          // plain respelling, stressed syllable in caps
   focus: 'k',             // key into PHONEMES — drives the coaching block
   why: '…',               // one line: why this word suits this month
@@ -204,17 +244,11 @@ To add a word, append to the relevant month's `words` array in `js/data.js`:
 ```
 
 `focus` must be an existing key in `PHONEMES`. Run the data check before
-committing:
+committing — it validates required fields, the `focus` key, and flags any
+American IPA symbols that have crept in:
 
 ```bash
-node -e '
-const {MONTHS}=require("./js/data.js"); const {PHONEMES}=require("./js/phonics.js");
-let n=0, bad=[];
-MONTHS.forEach(M=>M.words.forEach(w=>{ n++;
-  ["w","c","ipa","say","focus","why","acts"].forEach(k=>{ if(!w[k]) bad.push(M.m+" "+w.w+" missing "+k); });
-  if(!PHONEMES[w.focus]) bad.push(M.m+" "+w.w+" unknown focus "+w.focus);
-}));
-console.log(n,"words;",bad.length?bad:"all valid");'
+npm run check      # or: node scripts/check-data.js
 ```
 
 ---

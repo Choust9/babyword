@@ -1,0 +1,12 @@
+{
+  "name": "baby-word-of-the-day",
+  "version": "2.0.0",
+  "description": "A daily, age-appropriate word to teach your baby, with British English phonics coaching and progress tracking.",
+  "private": true,
+  "scripts": {
+    "check": "node scripts/check-data.js",
+    "icons": "python3 scripts/make_icons.py",
+    "start": "python3 -m http.server 8099"
+  },
+  "license": "MIT"
+}

@@ -24,10 +24,10 @@ then, and the teaching techniques that matter most at that age.
 
 **Word of the Day**, picked from your baby's current month plan, with:
 
-- **Real phonics coaching** — the stressed syllable ("buh-NAN-uh"), the IPA,
-  the specific sound the word practises, *what your mouth actually does* to
-  make it ("lips press together, voice on, air out through the nose"), and a
-  minimal-pair game to sharpen it.
+- **Real phonics coaching, in British English** — the stressed syllable
+  ("buh-NAH-nuh"), the IPA, the specific sound the word practises, *what your
+  mouth actually does* to make it ("lips press together, voice on, air out
+  through the nose"), and a minimal-pair game to sharpen it.
 - **When to expect it back** — every sound is tagged Early / Middle / Later /
   Latest, so you know "wabbit" for "rabbit" at three is completely normal.
 - **Why** the word suits this month, and **2–3 things to do today**, written
@@ -71,6 +71,13 @@ into these narrative bands:
 | Word combos | 18–23 mo | Verb explosion, opposites, position words, counting |
 | Sentences | 24–36 mo | Pronouns, questions, categories, storytelling |
 
+**Pronunciation is British English throughout** — Received Pronunciation /
+Standard Southern British. Transcriptions are non-rhotic (`car` is `/kɑː/`
+with no r sound, but `carry` keeps it), the BATH set takes `/ɑː/` (`bath`
+`/bɑːθ/`, `grass` `/ɡrɑːs/`), and LOT takes `/ɒ/` (`hot` `/hɒt/`, `dog`
+`/dɒɡ/`). Respellings assume a British reader: `more` is "MAW", `car` is
+"KAH". `npm run check` fails the build if an American symbol creeps in.
+
 Content lives in two framework-free data files, easy to review or hand to an
 SLT reviewer:
 
@@ -88,14 +95,21 @@ therapist's review.
 No build step, no dependencies. Any static server works:
 
 ```bash
-python3 -m http.server 8099
+npm start          # python3 -m http.server 8099
 # then open http://localhost:8099
+```
+
+Validate the curriculum after editing content (checks required fields, phoneme
+keys, and that transcriptions stay British English):
+
+```bash
+npm run check
 ```
 
 Regenerate the app icons (pure-Python, no libraries needed):
 
 ```bash
-python3 scripts/make_icons.py
+npm run icons      # python3 scripts/make_icons.py
 ```
 
 ## Add it to an iPhone home screen (today, no App Store)
@@ -121,7 +135,9 @@ js/
   storage.js             localStorage persistence + dashboard aggregates
   app.js                 Controller: age→month→word-of-the-day logic + rendering
 icons/                   Generated PNG app icons
-scripts/make_icons.py    Dependency-free icon generator
+scripts/
+  make_icons.py          Dependency-free icon generator
+  check-data.js          Curriculum validation (npm run check)
 CONTENT-DESIGN.md        Why the curriculum is built this way + the evidence
 MIGRATION.md             How to take this from GitHub to the App Store
 ```
@@ -136,9 +152,10 @@ App Store checklist, data-model portability notes, and a phased roadmap.
 
 - **Review by a certified speech-language therapist** — the most important
   step before this reaches other parents (see CONTENT-DESIGN.md §6)
-- Recorded audio for each word and each focus sound
-- Regional pronunciations (British, Irish, Australian) — IPA is General
-  American only today
+- Recorded audio for each word and each focus sound, in a British voice
+- Regional pronunciations — currently Southern British only, so Northern
+  English (`bath` /bæθ/), Scottish, Irish, American and Australian speakers
+  will find some transcriptions don't match their own accent
 - Daily local notification ("Today's word is ready 👶")
 - Red-flag guidance: when to seek professional advice
 - Photos: let parents snap the real-world object they pointed at

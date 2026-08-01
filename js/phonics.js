@@ -21,6 +21,15 @@
  * (Sander 1972; Crowe & McLeod 2020). They describe when most children
  * *produce* a sound accurately — babies understand long before they can say
  * it, so a "later" sound is still fine to model from day one.
+ *
+ * PRONUNCIATION VARIETY: British English (Received Pronunciation / Standard
+ * Southern British). Two consequences run through the whole curriculum:
+ *   - Non-rhotic. /r/ is only pronounced before a vowel, so "car" is /kɑː/
+ *     with no r sound at all, while "carry" keeps it. Transcriptions and
+ *     respellings both assume a British reader.
+ *   - The BATH set takes /ɑː/ ("bath" /bɑːθ/, "grass" /ɡrɑːs/) and the LOT
+ *     set takes /ɒ/ ("hot" /hɒt/, "dog" /dɒɡ/).
+ * See CONTENT-DESIGN.md §3 for the full treatment.
  */
 
 const PHONEMES = {
@@ -150,9 +159,9 @@ const PHONEMES = {
     contrast: ['v / f — "vvv" tickles, "fff" is just wind'],
   },
   r: {
-    ipa: '/ɹ/', name: 'the "rrr" sound', band: 'latest', byAge: 'often 5–6 years',
-    how: 'The tongue bunches up in the middle of the mouth without touching anything. This is one of the last sounds to arrive — "wabbit" for "rabbit" is completely normal for years.',
-    mouth: 'Tongue bunched, touching nothing · voiced',
+    ipa: '/r/', name: 'the "rrr" sound', band: 'latest', byAge: 'often 5–6 years',
+    how: 'The tongue bunches up in the middle of the mouth without touching anything. In British English you only actually say it before a vowel — there is no "r" sound in "car" or "farm", but there is one in "carry" and "rabbit". This is one of the last sounds to arrive: "wabbit" for "rabbit" is completely normal for years.',
+    mouth: 'Tongue bunched, touching nothing · voiced · only before a vowel',
     contrast: ['r / w — expect "w" substitutions well into the preschool years'],
   },
   th: {
