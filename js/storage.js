@@ -76,13 +76,19 @@ function loadState() {
   }
 }
 
+const saveListeners = [];
+
 function saveState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     console.error('Could not save state.', err);
   }
+  saveListeners.forEach((fn) => { try { fn(state); } catch (e) { console.warn(e); } });
 }
+
+// Called after every save — used by sync.js to schedule a debounced push.
+function onSave(fn) { saveListeners.push(fn); }
 
 const wordKey = (month, word) => `${month}::${word}`;
 
@@ -97,7 +103,10 @@ function getPhrase(state, month, phrase) {
 function setStatusIn(bucket, key, status) {
   const now = new Date().toISOString();
   const existing = bucket[key] || {};
-  const next = { ...existing, status };
+  // `updatedISO` is stamped on EVERY write, including a reset back to 'todo'.
+  // Cross-device merging is per-entry last-write-wins on this field, so
+  // without it a reset would be resurrected by a stale copy from elsewhere.
+  const next = { ...existing, status, updatedISO: now };
   if (status === 'teaching' && !existing.startedISO) next.startedISO = now;
   if (status === 'mastered') {
     if (!next.startedISO) next.startedISO = now;
@@ -201,7 +210,7 @@ function resetState() {
 }
 
 window.Store = {
-  loadState, saveState, wordKey,
+  loadState, saveState, onSave, wordKey,
   getProgress, getPhrase, setStatus, setPhraseStatus,
   summarise, monthProgress, setSetting,
   exportState, importState, resetState,

@@ -132,10 +132,23 @@
     render();
   }
 
+  // The banner overlays the header, so it must not sit there indefinitely —
+  // it would block the settings button and the tabs. Like a real notification,
+  // it slides away on its own after a few seconds.
+  let bannerTimer = null;
+  const BANNER_MS = 7000;
+
   function renderBanner(plan) {
-    if (!bannerDue()) return null;
+    if (!bannerDue()) {
+      clearTimeout(bannerTimer);
+      bannerTimer = null;
+      return null;
+    }
     const word = wordOfTheDay(plan);
     const open = () => { activeTab = 'today'; dismissBanner(); };
+    if (!bannerTimer) {
+      bannerTimer = setTimeout(() => { bannerTimer = null; dismissBanner(); }, BANNER_MS);
+    }
 
     return el('div', { class: 'banner-wrap', role: 'status' },
       el('div', { class: 'banner' },
@@ -501,7 +514,9 @@
     const header = el('header', { class: 'top' },
       el('div', {},
         el('div', { class: 'greeting' }, state.baby.name),
-        el('div', { class: 'age' }, `${ageLabel(state.baby.birthISO)} · ${bandFor(months).label}`)),
+        el('div', { class: 'age' },
+          `${ageLabel(state.baby.birthISO)} · ${bandFor(months).label}`,
+          syncBadge())),
       el('button', { class: 'icon-btn', title: 'Settings', onclick: () => { activeTab = 'settings'; render(); } }, '⚙️'));
 
     const TABS = [['today', 'Today'], ['dashboard', 'Dashboard'], ['plan', 'Plan'], ['library', 'Library']];
@@ -768,6 +783,63 @@
 
   // ---- Settings ----------------------------------------------------------
 
+  const SYNC_LABEL = {
+    off:     ['Local only',   'sync-off'],
+    idle:    ['Connecting…',  'sync-idle'],
+    syncing: ['Syncing…',     'sync-idle'],
+    ok:      ['Shared',       'sync-ok'],
+    error:   ['Sync problem', 'sync-err'],
+    offline: ['Offline',      'sync-idle'],
+  };
+
+  function syncBadge() {
+    if (!window.Sync) return null;
+    const s = window.Sync.status();
+    const [label, cls] = SYNC_LABEL[s.state] || SYNC_LABEL.idle;
+    if (s.state === 'off') return null;   // don't clutter the header when unused
+    return el('span', { class: `sync-badge ${cls}`, title: s.error || label }, label);
+  }
+
+  function renderSyncSettings() {
+    if (!window.Sync) return null;
+    const s = window.Sync.status();
+    const id = window.Sync.recordId(state.baby);
+    const [label] = SYNC_LABEL[s.state] || SYNC_LABEL.idle;
+
+    if (!window.Sync.configured()) {
+      return el('div', { class: 'card' },
+        el('h3', { class: 'how-title' }, '☁️ Shared progress'),
+        el('p', { class: 'hint' },
+          'Off. Progress is saved on this device only, so other phones will not ' +
+          'see it. To share one record across devices, fill in js/config.js with ' +
+          'your Appwrite details — see SYNC.md.'));
+    }
+
+    const when = s.lastSyncISO ? new Date(s.lastSyncISO).toLocaleTimeString() : 'not yet';
+    return el('div', { class: 'card' },
+      el('div', { class: 'set-row' },
+        el('div', { class: 'set-label' },
+          el('h3', { class: 'how-title set-title' }, '☁️ Shared progress'),
+          el('p', { class: 'hint set-hint' },
+            'Anyone who enters the same name and date of birth shares this record.')),
+        syncBadge()),
+      el('div', { class: 'set-sub' },
+        el('div', { class: 'rec-row' },
+          el('span', { class: 'rec-label' }, 'Record'),
+          el('code', { class: 'rec-id' }, id || '—')),
+        el('div', { class: 'rec-row' },
+          el('span', { class: 'rec-label' }, 'Status'),
+          el('span', {}, label)),
+        el('div', { class: 'rec-row' },
+          el('span', { class: 'rec-label' }, 'Last synced'),
+          el('span', {}, when)),
+        s.error ? el('p', { class: 'sync-error' }, s.error) : null,
+        el('button', { class: 'btn btn-ghost btn-block', onclick: () => window.Sync.syncNow() }, '↻ Sync now'),
+        el('p', { class: 'hint' },
+          'Reminder settings stay on this device — a banner you dismiss should ' +
+          'not disappear for everyone else.')));
+  }
+
   function renderReminderSettings() {
     const s = state.settings || {};
     const on = !!s.dailyBanner;
@@ -834,6 +906,7 @@
         el('p', { class: 'hint' }, `${state.baby.name} · born ${new Date(state.baby.birthISO).toLocaleDateString()} · ${ageLabel(state.baby.birthISO)}`),
         el('button', { class: 'btn btn-ghost btn-block', onclick: () => { state.baby = null; Store.saveState(state); render(); } },
           'Edit baby details')),
+      renderSyncSettings(),
       renderReminderSettings(),
       el('div', { class: 'card' },
         el('h3', { class: 'how-title' }, 'Your data'),
@@ -865,6 +938,25 @@
   // ---- Boot --------------------------------------------------------------
 
   render();
+
+  // Shared progress across devices, if js/config.js is filled in. The app is
+  // fully functional without it — this only adds a shared copy in Appwrite.
+  if (window.Sync) {
+    // Never re-render out from under someone who is typing — a background
+    // pull would otherwise destroy the focused input mid-keystroke.
+    const safeRender = () => {
+      const el = document.activeElement;
+      const tag = el && el.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      render();
+    };
+    Store.onSave(() => window.Sync.schedulePush());
+    window.Sync.onStatus(() => { if (state.baby) safeRender(); });
+    window.Sync.start(
+      () => state,
+      (merged) => { state = merged; Store.saveState(state); safeRender(); }
+    );
+  }
 
   // Escape steps back out of the sheet, one level at a time.
   document.addEventListener('keydown', (e) => {

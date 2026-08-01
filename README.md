@@ -63,8 +63,16 @@ on tap to the full pronunciation coaching and activities. On the Dashboard,
 tapping a speech sound lists every word that practises it, and tapping anything
 in "recently worked on" reopens its card.
 
-**Private by default** — everything stays on the device. Export/import your
-progress as JSON to back it up or move devices.
+**Shared across devices, optionally** — by default everything stays on the one
+device. Point `js/config.js` at an Appwrite database and the baby's **name +
+date of birth becomes the key**: everyone who enters "Sophia" and 23/01/2026
+sees and updates the same record, on any phone, with no accounts or logins.
+Merging is per-entry, so two parents ticking off different words both count.
+See **[SYNC.md](SYNC.md)** — including the security trade-off of having no
+accounts.
+
+**Private by default** — with sync off, nothing leaves the device. Export/import
+your progress as JSON to back it up or move devices either way.
 
 **Installable & offline** — it's a PWA: "Add to Home Screen" on an iPhone and
 it runs full-screen with no browser chrome, even with no signal.
@@ -180,9 +188,11 @@ manifest.webmanifest     PWA manifest (name, icons, standalone display)
 service-worker.js        Offline caching, installability
 css/styles.css           Warm, rounded, light+dark design
 js/
+  config.js              Optional Appwrite settings for shared progress (blank = local only)
   phonics.js             Phoneme table (articulation, age bands) + teaching techniques
   data.js                The 37 monthly plans — words and phrase patterns
   storage.js             localStorage persistence + dashboard aggregates
+  sync.js                Cross-device sync against an Appwrite database
   app.js                 Controller: age→month→word-of-the-day logic + rendering
 icons/                   Generated PNG app icons
 scripts/
@@ -190,6 +200,7 @@ scripts/
   check-data.js          Curriculum validation (npm run check)
   build.js               Assembles dist/ for static hosts (npm run build)
 CONTENT-DESIGN.md        Why the curriculum is built this way + the evidence
+SYNC.md                  Setting up shared cross-device progress in Appwrite
 MIGRATION.md             How to take this from GitHub to the App Store
 ```
 
@@ -212,5 +223,7 @@ App Store checklist, data-model portability notes, and a phased roadmap.
 - Red-flag guidance: when to seek professional advice
 - Photos: let parents snap the real-world object they pointed at
 - Multiple children / profiles
+- A shared passphrase mixed into the record id, if the open collection ever
+  stops feeling comfortable (SYNC.md covers this)
 - Bilingual households mode
 - iCloud sync across a couple's devices

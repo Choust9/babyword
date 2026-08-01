@@ -365,6 +365,31 @@ body {
 }
 .banner-x:hover { color: var(--ink); }
 
+/* ---------- Sync status ---------- */
+
+.sync-badge {
+  display: inline-block; margin-left: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  vertical-align: 1px;
+}
+.sync-ok   { background: rgba(51, 201, 163, 0.18); color: #1f9d80; }
+.sync-idle { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
+.sync-err  { background: rgba(239, 90, 111, 0.15); color: var(--danger); }
+.sync-off  { background: var(--bg); color: var(--ink-soft); }
+@media (prefers-color-scheme: dark) { .sync-ok { color: var(--mint); } }
+
+.rec-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.rec-row:last-of-type { border-bottom: none; }
+.rec-label { color: var(--ink-soft); font-weight: 650; }
+.rec-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; background: var(--bg); border: 1px solid var(--line);
+  padding: 4px 9px; border-radius: 9px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62%;
+}
+.sync-error { color: var(--danger); font-size: 12.5px; line-height: 1.5; margin: 10px 0 0; }
+
 /* ---------- Settings: toggle switch ---------- */
 
 .set-row { display: flex; align-items: flex-start; gap: 14px; }

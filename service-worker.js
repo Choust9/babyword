@@ -4,14 +4,16 @@
  * whenever you ship new assets so clients pick up the update.
  */
 
-const CACHE_VERSION = 'babbler-v3';
+const CACHE_VERSION = 'babbler-v4';
 const ASSETS = [
   './',
   './index.html',
   './css/styles.css',
+  './js/config.js',
   './js/phonics.js',
   './js/data.js',
   './js/storage.js',
+  './js/sync.js',
   './js/app.js',
   './manifest.webmanifest',
   './icons/icon-180.png',
@@ -35,6 +37,10 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Only ever serve the app shell from cache. Cross-origin requests — notably
+  // the Appwrite sync API — must always hit the network, or devices would
+  // reconcile against a stale cached copy of the shared record.
+  if (new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
