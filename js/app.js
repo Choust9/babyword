@@ -393,7 +393,7 @@
       ),
       el('div', { class: 'card' },
         el('h3', { class: 'how-title' }, 'Your data'),
-        el('p', { class: 'hint' }, 'Everything is stored privately on this device. Back it up or move it to a new device here.'),
+        el('p', { class: 'hint' }, 'Saved on this device and shared automatically with the other device using this app — no account needed. Export a backup or move to a new device here.'),
         exportBtn, importBtn, fileInput
       ),
       el('div', { class: 'card' },
@@ -407,6 +407,22 @@
   // ---- Boot --------------------------------------------------------------
 
   render();
+
+  // Pick up whatever the other person's device last saved, then re-render if
+  // it changed anything. Re-check whenever the app is reopened/resumed too,
+  // since a PWA is far more often resumed from the background than reloaded.
+  function resync() {
+    Store.syncOnLoad(state).then((next) => {
+      if (next !== state) {
+        state = next;
+        render();
+      }
+    });
+  }
+  resync();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resync();
+  });
 
   // Register the service worker for offline / installable behaviour.
   if ('serviceWorker' in navigator) {

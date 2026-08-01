@@ -32,8 +32,11 @@ first words, all the way to sentences and "why?".
   library you've covered, so you never lose track or wonder if you're repeating
   yourself.
 - **Library** — browse every word in every stage, look ahead or revisit.
-- **Private by default** — everything is stored locally on the device. Export /
-  import your progress as a JSON file to back it up or move devices.
+- **Shared between two devices, no account needed** — progress is saved
+  locally and synced to a small Netlify Blobs-backed endpoint
+  (`netlify/functions/sync.mts`) so both parents see the same baby's
+  progress. Export / import your progress as a JSON file too, for a manual
+  backup or a one-off device move.
 - **Installable & offline** — it's a PWA: "Add to Home Screen" on an iPhone and
   it runs full-screen with no browser chrome, even with no signal.
 

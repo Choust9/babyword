@@ -1,0 +1,12 @@
+{
+  "name": "baby-word-of-the-day",
+  "version": "1.0.0",
+  "description": "A daily, age-appropriate word to teach your baby — with simple, concrete ways to bring it to life, plus a checklist so you always know which words you've started and which you haven't.",
+  "private": true,
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/blobs": "^10.7.11",
+    "@netlify/functions": "^5.3.0"
+  }
+}
