@@ -143,7 +143,7 @@
           class: 'banner-main', onclick: open,
           'aria-label': `Today's word is ${word.w}. Open it.`,
         },
-          el('div', { class: 'banner-icon', 'aria-hidden': 'true' }, '🍼'),
+          el('div', { class: 'banner-icon' }, logoMark(40)),
           el('div', { class: 'banner-text' },
             el('div', { class: 'banner-title' }, "Today's word is ready"),
             el('div', { class: 'banner-word' }, `${word.w} · ${word.say}`),
@@ -171,6 +171,36 @@
     if (!isOpen) window.scrollTo(0, scroll);
   }
 
+  // ---- Brand -------------------------------------------------------------
+
+  // The app mark, matching icons/ exactly: a speech bubble rising from a
+  // baby's head. Inline SVG so it stays crisp at any size and needs no request.
+  let logoSeq = 0;
+  function logoMark(size = 84) {
+    // Unique gradient id per instance: two marks can share a page (onboarding
+    // and the banner), and duplicate ids are invalid.
+    const gid = `babblerGrad${++logoSeq}`;
+    const svg = svgEl('svg', { viewBox: '0 0 100 100', width: size, height: size, class: 'logo-svg', 'aria-hidden': 'true' });
+    const defs = svgEl('defs');
+    const grad = svgEl('linearGradient', { id: gid, x1: '0', y1: '0', x2: '0', y2: '1' });
+    grad.appendChild(svgEl('stop', { offset: '0', 'stop-color': '#ffcf5c' }));
+    grad.appendChild(svgEl('stop', { offset: '1', 'stop-color': '#ff8a5c' }));
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    svg.appendChild(svgEl('rect', { width: 100, height: 100, rx: 30, fill: `url(#${gid})` }));
+    // Speech bubble: body, then the tail pointing down-left at the baby.
+    svg.appendChild(svgEl('rect', { x: 42, y: 13, width: 48, height: 34, rx: 11, fill: '#fff' }));
+    svg.appendChild(svgEl('polygon', { points: '50,44 46,55 60,46', fill: '#fff' }));
+    // Baby: head, curl, ear.
+    svg.appendChild(svgEl('circle', { cx: 32, cy: 71.5, r: 16.5, fill: '#fff' }));
+    svg.appendChild(svgEl('circle', { cx: 32.5, cy: 55.2, r: 4.9, fill: '#fff' }));
+    svg.appendChild(svgEl('circle', { cx: 15.8, cy: 72.2, r: 5, fill: '#fff' }));
+    // The babble.
+    for (const cx of [55, 66, 77]) svg.appendChild(svgEl('circle', { cx, cy: 30, r: 3.7, fill: '#7c6cf0' }));
+    return svg;
+  }
+
   // ---- Onboarding --------------------------------------------------------
 
   function renderOnboarding() {
@@ -192,8 +222,9 @@
 
     return el('section', { class: 'onboard' },
       el('div', { class: 'onboard-hero' },
-        el('div', { class: 'logo-badge', 'aria-hidden': 'true' }, '🍼'),
-        el('h1', { class: 'onboard-title' }, 'Baby Word of the Day'),
+        el('div', { class: 'logo-badge' }, logoMark(84)),
+        el('h1', { class: 'onboard-title' }, 'Babbler'),
+        el('p', { class: 'onboard-tag' }, 'Baby word of the day'),
         el('p', { class: 'onboard-sub' },
           'A daily, age-appropriate word to teach your little one — with the ' +
           'phonics to pronounce it and simple ways to bring it to life.')),

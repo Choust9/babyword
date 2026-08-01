@@ -1,7 +1,7 @@
 {
-  "name": "Baby Word of the Day",
-  "short_name": "Baby Words",
-  "description": "A daily, age-appropriate word to teach your baby, with simple milestone-based activities and progress tracking.",
+  "name": "Babbler — Baby Word of the Day",
+  "short_name": "Babbler",
+  "description": "A daily, age-appropriate word to teach your baby, with British English phonics coaching, monthly plans and progress tracking.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

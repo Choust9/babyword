@@ -36,7 +36,7 @@ become the app's UI unchanged.
 ```bash
 # 1. From the repo root (a package.json already exists), add Capacitor
 npm install @capacitor/core @capacitor/cli @capacitor/ios
-npx cap init "Baby Word of the Day" com.yourname.babywords --web-dir .
+npx cap init "Babbler" com.yourname.babbler --web-dir .
 
 # 2. Add the iOS platform (creates an Xcode project under ./ios)
 npx cap add ios

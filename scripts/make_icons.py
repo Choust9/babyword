@@ -1,79 +1,116 @@
 #!/usr/bin/env python3
-"""Generate app icons with no third-party dependencies (stdlib zlib only).
+"""Generate Babbler's app icons with no third-party dependencies (stdlib zlib).
 
-Design: a warm sun->coral gradient rounded square with a white speech bubble
-(the "word of the day") and three dots inside it. Regenerate any time with:
-    python3 scripts/make_icons.py
+Design: a warm sun->coral gradient rounded square holding a baby's head (circle
+plus a curl of hair) with a speech bubble rising from it, three dots inside the
+bubble standing for the babble/word of the day.
+
+The same artwork is drawn as inline SVG in the app's onboarding screen, so the
+icon and the in-app logo match.
+
+Regenerate with:  npm run icons   (or: python3 scripts/make_icons.py)
 """
 import struct, zlib, math, os
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "icons")
 os.makedirs(OUT, exist_ok=True)
 
+TOP = (255, 207, 92)     # sun
+BOT = (255, 138, 92)     # coral
+DOT = (124, 108, 240)    # accent purple
+WHITE = (255, 255, 255)
+
+
 def lerp(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
+
 def rounded_alpha(x, y, size, radius):
-    # 1 inside rounded square, 0 outside, smooth edge
+    """Coverage of a rounded square, with a soft edge."""
     cx = min(max(x, radius), size - radius)
     cy = min(max(y, radius), size - radius)
     d = math.hypot(x - cx, y - cy)
     return max(0.0, min(1.0, radius - d + 0.5))
 
-def bubble_alpha(x, y, size):
-    # A speech bubble: rounded rect body + a small tail bottom-left.
-    s = size
-    bx0, by0, bx1, by1 = 0.22*s, 0.24*s, 0.78*s, 0.60*s
-    r = 0.10*s
-    inside = 0.0
-    # body (rounded rect)
-    cx = min(max(x, bx0+r), bx1-r)
-    cy = min(max(y, by0+r), by1-r)
-    if math.hypot(x-cx, y-cy) <= r:
-        inside = 1.0
-    # tail (triangle-ish blob)
-    tx, ty = 0.34*s, 0.72*s
-    if math.hypot(x-tx, y-ty) <= 0.09*s and y > by1-2:
-        inside = 1.0
-    return inside
+
+def disc(x, y, cx, cy, r):
+    return math.hypot(x - cx, y - cy) <= r
+
+
+def rounded_rect(x, y, x0, y0, x1, y1, r):
+    if not (x0 <= x <= x1 and y0 <= y <= y1):
+        return False
+    cx = min(max(x, x0 + r), x1 - r)
+    cy = min(max(y, y0 + r), y1 - r)
+    return math.hypot(x - cx, y - cy) <= r
+
+
+def triangle(px, py, a, b, c):
+    """Point-in-triangle via consistent edge signs."""
+    def side(p, q, r):
+        return (p[0] - r[0]) * (q[1] - r[1]) - (q[0] - r[0]) * (p[1] - r[1])
+    d1 = side((px, py), a, b)
+    d2 = side((px, py), b, c)
+    d3 = side((px, py), c, a)
+    neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
+    pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
+    return not (neg and pos)
+
+
+def artwork(u, v):
+    """Return a colour for normalised coords (0..1), or None for background."""
+    # Speech bubble body
+    if rounded_rect(u, v, 0.42, 0.13, 0.90, 0.47, 0.11):
+        for dx in (0.55, 0.66, 0.77):
+            if disc(u, v, dx, 0.30, 0.037):
+                return DOT
+        return WHITE
+    # Bubble tail, pointing down-left towards the baby
+    if triangle(u, v, (0.50, 0.44), (0.46, 0.55), (0.60, 0.46)):
+        return WHITE
+    # Baby's head: a circle, a centred tuft of hair, and an ear. All solid
+    # discs that merge into one silhouette — a stroked arc would punch a hole
+    # of background colour through the head where the two shapes overlap.
+    if disc(u, v, 0.32, 0.715, 0.165):     # head
+        return WHITE
+    if disc(u, v, 0.325, 0.552, 0.049):    # curl of hair
+        return WHITE
+    if disc(u, v, 0.158, 0.722, 0.050):    # ear
+        return WHITE
+    return None
+
 
 def make(size, maskable=False):
-    top = (255, 207, 92)     # sun
-    bot = (255, 138, 92)     # coral
-    dot = (124, 108, 240)    # accent purple
-    pad = 0 if maskable else 0
-    radius = size * (0.30 if not maskable else 0.001)
+    # Maskable icons must keep their artwork inside a ~80% safe zone.
+    scale = 0.78 if maskable else 1.0
+    radius = size * (0.0 if maskable else 0.30)
+
     rows = bytearray()
     for y in range(size):
-        rows.append(0)  # filter byte per scanline
+        rows.append(0)  # PNG filter byte per scanline
         for x in range(size):
             t = y / (size - 1)
-            bg = lerp(top, bot, t)
+            r, g, b = lerp(TOP, BOT, t)
             a = 1.0 if maskable else rounded_alpha(x, y, size, radius)
-            # composite over transparent
-            r, g, b = bg
-            aa = a
-            # speech bubble in white
-            ba = bubble_alpha(x, y, size)
-            if ba > 0:
-                r, g, b = 255, 255, 255
-            # three dots inside the bubble
-            for i, dx in enumerate((0.36, 0.50, 0.64)):
-                if math.hypot(x - dx*size, y - 0.42*size) <= 0.035*size:
-                    r, g, b = dot
-            rows.extend((r, g, b, int(aa * 255)))
-    raw = bytes(rows)
-    compressed = zlib.compress(raw, 9)
+
+            # Normalised coords, scaled about the centre for maskable icons.
+            u = ((x + 0.5) / size - 0.5) / scale + 0.5
+            v = ((y + 0.5) / size - 0.5) / scale + 0.5
+            paint = artwork(u, v) if 0.0 <= u <= 1.0 and 0.0 <= v <= 1.0 else None
+            if paint:
+                r, g, b = paint
+
+            rows.extend((r, g, b, int(a * 255)))
+
+    compressed = zlib.compress(bytes(rows), 9)
 
     def chunk(typ, data):
         c = struct.pack(">I", len(data)) + typ + data
-        c += struct.pack(">I", zlib.crc32(typ + data) & 0xffffffff)
-        return c
+        return c + struct.pack(">I", zlib.crc32(typ + data) & 0xffffffff)
 
-    sig = b"\x89PNG\r\n\x1a\n"
-    ihdr = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)  # RGBA
-    png = sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", compressed) + chunk(b"IEND", b"")
-    return png
+    ihdr = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)  # 8-bit RGBA
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", compressed) + chunk(b"IEND", b"")
+
 
 for size in (180, 192, 512):
     with open(os.path.join(OUT, f"icon-{size}.png"), "wb") as f:

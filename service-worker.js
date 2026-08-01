@@ -1,10 +1,10 @@
 /*
- * service-worker.js — makes the app installable and fully offline.
+ * service-worker.js — makes Babbler installable and fully offline.
  * Uses a simple "cache-first, then network" strategy. Bump CACHE_VERSION
  * whenever you ship new assets so clients pick up the update.
  */
 
-const CACHE_VERSION = 'baby-words-v2';
+const CACHE_VERSION = 'babbler-v3';
 const ASSETS = [
   './',
   './index.html',

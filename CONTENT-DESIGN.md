@@ -1,4 +1,4 @@
-# Content design — how the curriculum was built
+# Content design — how Babbler's curriculum was built
 
 This document explains *why* the words, the monthly structure and the coaching
 advice are the way they are, and where the evidence comes from. It is intended
