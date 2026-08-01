@@ -80,9 +80,10 @@ not a redesign.
 
 | Prototype file | Native equivalent |
 |---|---|
-| `js/data.js` (STAGES + words) | A Swift `Curriculum.swift` with `struct Stage` / `struct Word`, or ship the JSON and decode it with `Codable` |
-| `js/app.js` age/stage/word-of-the-day rules | Pure Swift functions — the maths is identical (see below) |
-| `js/storage.js` | `UserDefaults` or Core Data; `@AppStorage` for the profile; CloudKit for iCloud sync |
+| `js/data.js` (37 `MONTHS` plans) | A Swift `Curriculum.swift` with `struct MonthPlan` / `struct Word`, or ship the JSON and decode it with `Codable` |
+| `js/phonics.js` (`PHONEMES`, `TECHNIQUES`) | Two `Codable` dictionaries — pure reference data, no logic to port |
+| `js/app.js` age/month/word-of-the-day rules | Pure Swift functions — the maths is identical (see below) |
+| `js/storage.js` | `UserDefaults` or Core Data; `@AppStorage` for the profile; CloudKit for iCloud sync. `summarise()` becomes a computed dashboard view-model |
 | `css/styles.css` | SwiftUI views + a colour asset catalog (light/dark already defined) |
 
 ### The core logic to port
@@ -91,40 +92,53 @@ Three small, framework-free rules power the whole app — they translate almost
 line-for-line:
 
 1. **`ageInMonths(birth, today)`** — whole months between two dates.
-2. **`stageForMonths(months)`** — the stage whose `[minMonths, maxMonths)`
-   window contains the age (clamped to the last stage for older toddlers).
-3. **`wordOfTheDay(stage, date)`** — a deterministic day index
-   (`floor(midnight / 86400000)`) rotated over the stage's not-yet-mastered
+2. **`planForMonth(months)`** — index into `MONTHS`, clamped to `0...36` so
+   older children keep working.
+3. **`wordOfTheDay(plan, date)`** — a deterministic day index
+   (`floor(midnight / 86400000)`) rotated over the month's not-yet-mastered
    words, so "today's word" is stable per day and advances daily.
 
 Example Swift skeleton:
 
 ```swift
 struct Word: Codable, Identifiable {
-    var id: String { word }
-    let word, category, ipa, say, why: String
-    let activities: [String]
+    var id: String { w }
+    let w, c, ipa, say, focus, why: String   // focus keys into PHONEMES
+    let acts: [String]
 }
 
-struct Stage: Codable, Identifiable {
-    let id: String
-    let label, headline, summary: String
-    let minMonths, maxMonths: Int
-    let milestones: [String]
+struct Phrase: Codable { let p, pattern, tip: String }
+
+struct MonthPlan: Codable, Identifiable {
+    var id: Int { m }
+    let m: Int
+    let title, focus, summary: String
+    let milestones, techniques: [String]
     let words: [Word]
+    let phrases: [Phrase]?
 }
 
 func ageInMonths(birth: Date, on: Date = .now) -> Int {
-    Calendar.current.dateComponents([.month], from: birth, to: on).month ?? 0
+    max(0, Calendar.current.dateComponents([.month], from: birth, to: on).month ?? 0)
 }
 
-func stage(forMonths m: Int, in stages: [Stage]) -> Stage {
-    stages.first { m >= $0.minMonths && m < $0.maxMonths } ?? stages.last!
+func plan(forMonth m: Int, in months: [MonthPlan]) -> MonthPlan {
+    months[min(max(m, 0), months.count - 1)]
+}
+
+func wordOfTheDay(_ plan: MonthPlan, on date: Date = .now,
+                  isMastered: (Word) -> Bool) -> Word {
+    let pool = plan.words.filter { !isMastered($0) }
+    let candidates = pool.isEmpty ? plan.words : pool
+    let day = Int(date.timeIntervalSince1970 / 86_400)
+    return candidates[day % candidates.count]
 }
 ```
 
-Ship `data.js`'s content as a `curriculum.json` (trivial to derive) and decode
-it — the two data models are intentionally the same shape.
+Ship the contents of `data.js` and `phonics.js` as `curriculum.json` and
+`phonics.json` (trivial to derive — both are already plain data with no
+functions) and decode them. The models are intentionally the same shape, so the
+field names above match the JavaScript exactly.
 
 ### Native features worth adding in Route B
 

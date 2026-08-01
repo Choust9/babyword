@@ -207,3 +207,114 @@ body {
 .empty { text-align: center; color: var(--ink-soft); line-height: 1.6; padding: 30px 10px; }
 
 .hidden-file { display: none; }
+.hidden { display: none; }
+.foot-note { text-align: center; color: var(--ink-soft); font-size: 12.5px; margin-top: 18px; }
+.section-title { font-size: 15px; font-weight: 750; margin: 22px 0 6px; }
+.section-note { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; margin: 0 0 14px; }
+
+/* ---------- Phonics coaching ---------- */
+
+.phonics { background: var(--bg); border-radius: 16px; padding: 16px; margin: 4px 0 14px; border: 1px solid var(--line); }
+.phonics-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.phonics-head .how-title { margin: 0; flex: 1 1 auto; min-width: 0; }
+.band { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.band-early  { background: rgba(51, 201, 163, 0.18); color: #1f9d80; }
+.band-middle { background: rgba(255, 207, 92, 0.24); color: #a8760a; }
+.band-later  { background: rgba(255, 138, 92, 0.20); color: #d2622f; }
+.band-latest { background: rgba(124, 108, 240, 0.18); color: #6355d8; }
+@media (prefers-color-scheme: dark) {
+  .band-early { color: var(--mint); } .band-middle { color: var(--sun); }
+  .band-later { color: var(--primary); } .band-latest { color: #a99bff; }
+}
+
+.say-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 12px 0 14px; }
+.say-big { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
+.say-ipa { color: var(--accent); font-size: 16px; font-weight: 600; }
+.say-inline { color: var(--ink-soft); font-size: 13.5px; margin-top: 4px; }
+
+.ph-target { border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 14px; }
+.ph-target-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); }
+.ph-target-name { font-size: 16px; font-weight: 700; margin: 2px 0; }
+.ph-target-age { font-size: 13px; color: var(--ink-soft); }
+
+.ph-how-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 5px; }
+.ph-how-body { font-size: 14.5px; line-height: 1.55; margin: 0 0 10px; }
+.ph-mouth { display: inline-block; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.ph-tip { margin-top: 12px; background: var(--card); border-radius: 12px; padding: 11px 13px; font-size: 13.5px; line-height: 1.5; border: 1px solid var(--line); }
+
+.chip-sound { background: rgba(124, 108, 240, 0.14); color: var(--accent); border-color: transparent; }
+
+/* ---------- Techniques ---------- */
+
+.tech-list { display: flex; flex-direction: column; gap: 8px; }
+.tech { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; cursor: pointer; }
+.tech-head { display: flex; align-items: center; gap: 11px; }
+.tech-icon { font-size: 20px; }
+.tech-name { font-size: 14.5px; font-weight: 700; }
+.tech-short { font-size: 13px; color: var(--ink-soft); margin-top: 1px; }
+.tech-chev { margin-left: auto; color: var(--ink-soft); font-size: 20px; }
+.tech-detail { font-size: 14px; line-height: 1.55; margin: 10px 0 0; }
+.tech-cite { font-size: 11.5px; color: var(--ink-soft); margin-top: 8px; font-style: italic; }
+
+/* ---------- Month plan / picker ---------- */
+
+.month-badge { display: inline-block; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 20px; margin-bottom: 10px; }
+.stage-focus { color: var(--accent); font-size: 14px; font-weight: 650; margin-bottom: 10px; }
+
+.picker-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 8px; }
+.month-picker { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
+.mpill { flex: 0 0 auto; width: 40px; height: 40px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink-soft); border-radius: 13px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.mpill-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---------- Dashboard ---------- */
+
+.hero-card { display: flex; align-items: center; gap: 16px; }
+.hero-left { flex: 1; min-width: 0; }
+.hero-age { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+.hero-plan { font-size: 14px; font-weight: 650; color: var(--accent); margin-top: 3px; }
+.hero-band { font-size: 13px; color: var(--ink-soft); margin-top: 5px; line-height: 1.4; }
+
+.ring-wrap { position: relative; width: 108px; flex: 0 0 108px; text-align: center; }
+.ring { width: 108px; height: 108px; display: block; }
+.ring-bg { stroke: var(--line); }
+.ring-fg { stroke: url(#g) ; stroke: var(--primary); transition: stroke-dashoffset 0.5s ease; }
+.ring-label { position: absolute; top: 40px; left: 0; right: 0; }
+.ring-pct { font-size: 22px; font-weight: 800; line-height: 1; }
+.ring-sub { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; }
+.ring-caption { font-size: 11px; color: var(--ink-soft); margin-top: 2px; line-height: 1.3; }
+
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); }
+.tile-num { font-size: 30px; font-weight: 800; line-height: 1; }
+.tile-label { font-size: 13px; font-weight: 700; margin-top: 6px; }
+.tile-hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.35; }
+.tile-amber  .tile-num { color: #d99a06; }
+.tile-mint   .tile-num { color: var(--mint); }
+.tile-violet .tile-num { color: var(--accent); }
+.tile-coral  .tile-num { color: var(--primary); }
+
+.bar-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.bar-row .progress-wrap { flex: 1; margin-top: 0; }
+.bar-pct { font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+.cat-row { margin-bottom: 12px; }
+.cat-head { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 5px; }
+.cat-name { font-weight: 650; }
+.cat-count { color: var(--ink-soft); }
+.cat-track { height: 7px; background: var(--bg); border-radius: 8px; overflow: hidden; }
+.cat-fill { height: 100%; background: var(--accent); border-radius: 8px; transition: width 0.4s ease; }
+
+.sound-band { margin-bottom: 12px; }
+.sound-band-label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft); margin-bottom: 6px; }
+.sound-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sound-chip { font-size: 12.5px; font-weight: 650; padding: 5px 10px; border-radius: 10px; background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); opacity: 0.5; }
+.sound-chip.sound-on { opacity: 1; background: rgba(124, 108, 240, 0.14); color: var(--accent); border-color: transparent; }
+
+.prog-month { color: var(--ink-soft); font-weight: 400; font-size: 13px; }
+
+/* ---------- Phrase cards ---------- */
+
+.phrase-card { border-left: 4px solid var(--accent); }
+.phrase-text { font-size: 20px; font-weight: 750; letter-spacing: -0.2px; }
+.phrase-pattern { font-size: 12.5px; color: var(--accent); font-weight: 650; margin-top: 3px; }
+.phrase-card .btn { margin-top: 4px; }

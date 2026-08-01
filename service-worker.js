@@ -4,11 +4,12 @@
  * whenever you ship new assets so clients pick up the update.
  */
 
-const CACHE_VERSION = 'baby-words-v1';
+const CACHE_VERSION = 'baby-words-v2';
 const ASSETS = [
   './',
   './index.html',
   './css/styles.css',
+  './js/phonics.js',
   './js/data.js',
   './js/storage.js',
   './js/app.js',
