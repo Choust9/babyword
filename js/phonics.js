@@ -173,13 +173,13 @@ const PHONEMES = {
 
   // ---- Vowels & syllable shapes ------------------------------------------
   vowel: {
-    ipa: 'vowels', name: 'open vowel sounds', band: 'early', byAge: 'from birth',
+    ipa: 'vowels', name: 'open vowel sounds', label: 'open vowels', band: 'early', byAge: 'from birth',
     how: 'Vowels are made with an open, unobstructed mouth — the jaw, lips and tongue just change shape. Stretch them out ("baaaall") so the melody carries.',
     mouth: 'Open mouth · voiced · shape changes',
     contrast: ['ah / ee / oo — exaggerate the lip shape for each'],
   },
   redup: {
-    ipa: 'CV·CV', name: 'a repeated-syllable word', band: 'early', byAge: 'from birth',
+    ipa: 'CV·CV', name: 'a repeated-syllable word', label: 'repeated syllables', band: 'early', byAge: 'from birth',
     how: 'Words like ma-ma and ba-ba repeat the same simple syllable. The newborn brain groups repeated units into one chunk, which makes these the easiest wordforms of all to learn.',
     mouth: 'Same simple syllable, twice',
     contrast: ['ba-ba / ba-da — repetition is easier than variety'],

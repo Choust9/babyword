@@ -90,11 +90,36 @@
   let activeTab = 'today';
   let browseMonth = null;
 
+  // Which collapsed word cards are currently open. Keyed the same way as
+  // progress ("12::Mummy") so it survives the full re-render on every change.
+  const expandedWords = new Set();
+
+  // A small stack so drilling from a speech sound into one of its words can be
+  // stepped back out of. Entries: {type:'sound'|'word'|'phrase', ...}
+  let modalStack = [];
+  let savedScroll = 0;
+  const openModal = (m) => {
+    if (!modalStack.length) savedScroll = window.scrollY;
+    modalStack.push(m);
+    render();
+  };
+  const backModal = () => { modalStack.pop(); render(); };
+  const closeModals = () => { modalStack = []; render(); };
+
   function render() {
-    const scroll = window.scrollY;
+    // The page behind the sheet is scroll-locked, so remember where the user
+    // was and put them back there when the sheet closes.
+    const wasOpen = document.body.classList.contains('modal-open');
+    const scroll = wasOpen ? savedScroll : window.scrollY;
+
     app.innerHTML = '';
     app.appendChild(state.baby ? renderHome() : renderOnboarding());
-    window.scrollTo(0, scroll);
+    const sheet = renderModal();
+    if (sheet) app.appendChild(sheet);
+
+    const isOpen = modalStack.length > 0;
+    document.body.classList.toggle('modal-open', isOpen);
+    if (!isOpen) window.scrollTo(0, scroll);
   }
 
   // ---- Onboarding --------------------------------------------------------
@@ -190,28 +215,65 @@
         })));
   }
 
+  /*
+   * One card, three modes:
+   *   featured   — today's word: always open, carries the star tag
+   *   full       — always open, no tag (used inside a modal sheet)
+   *   expandable — collapsed summary that opens on tap (Plan / Library)
+   * Anything else renders as a plain always-open card.
+   */
   function renderWordCard(plan, word, opts = {}) {
+    const key = Store.wordKey(plan.m, word.w);
     const status = Store.getProgress(state, plan.m, word.w).status || 'todo';
-    const cycle = () => { Store.setStatus(state, plan.m, word.w, nextStatus(status)); render(); };
+    const open = !opts.expandable || expandedWords.has(key);
+    const toggle = () => {
+      if (expandedWords.has(key)) expandedWords.delete(key);
+      else expandedWords.add(key);
+      render();
+    };
+    const cycle = (e) => {
+      if (e) e.stopPropagation();
+      Store.setStatus(state, plan.m, word.w, nextStatus(status));
+      render();
+    };
     const actionLabel = status === 'todo' ? '✋ Start teaching this' : status === 'teaching' ? '✓ Mark as mastered' : '↺ Reset';
 
-    return el('article', { class: `card word-card ${opts.featured ? 'featured' : ''}` },
+    const summary = el('div', { class: 'word-head' },
+      el('div', { class: 'word-head-main' },
+        el('h2', { class: 'word-title' }, word.w),
+        !opts.featured ? el('div', { class: 'say-inline' }, `${word.say} · ${word.ipa}`) : null),
+      statusPill(status));
+
+    const chips = el('div', { class: 'chips' },
+      el('span', { class: 'chip' }, word.c),
+      el('span', { class: 'chip chip-ghost' }, `Month ${plan.m}`),
+      PHONEMES[word.focus] ? el('span', { class: 'chip chip-sound' }, PHONEMES[word.focus].ipa) : null);
+
+    const why = el('p', { class: 'word-why' }, word.why);
+
+    // In expandable mode the whole summary block is the tap target.
+    const header = opts.expandable
+      ? el('div', {
+          class: 'tap-region', role: 'button', tabindex: '0',
+          'aria-expanded': String(open),
+          'aria-label': `${word.w} — ${open ? 'hide' : 'show'} pronunciation and activities`,
+          onclick: toggle,
+          onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } },
+        }, summary, chips, why)
+      : el('div', {}, summary, chips, why);
+
+    return el('article', { class: `card word-card ${opts.featured ? 'featured' : ''} ${open ? 'is-open' : ''}` },
       opts.featured ? el('div', { class: 'featured-tag' }, "⭐ Today's word") : null,
-      el('div', { class: 'word-head' },
-        el('div', {},
-          el('h2', { class: 'word-title' }, word.w),
-          !opts.featured ? el('div', { class: 'say-inline' }, `${word.say} · ${word.ipa}`) : null),
-        statusPill(status)),
-      el('div', { class: 'chips' },
-        el('span', { class: 'chip' }, word.c),
-        el('span', { class: 'chip chip-ghost' }, `Month ${plan.m}`),
-        PHONEMES[word.focus] ? el('span', { class: 'chip chip-sound' }, PHONEMES[word.focus].ipa) : null),
-      el('p', { class: 'word-why' }, word.why),
-      opts.featured ? renderPhonics(word) : null,
-      opts.featured
+      header,
+      open ? renderPhonics(word) : null,
+      open
         ? el('div', { class: 'how' },
-            el('h3', { class: 'how-title' }, '👶 Do this today'),
+            el('h3', { class: 'how-title' }, opts.featured ? '👶 Do this today' : '👶 Ways to teach it'),
             el('ul', { class: 'activities' }, word.acts.map((a) => el('li', {}, a))))
+        : null,
+      opts.expandable
+        ? el('button', { class: 'disclosure', onclick: toggle },
+            open ? '▴ Hide details' : '▾ How to say it & ways to teach it')
         : null,
       el('div', { class: 'word-actions' },
         el('button', { class: `btn ${status === 'mastered' ? 'btn-ghost' : 'btn-primary'}`, onclick: cycle }, actionLabel)));
@@ -219,7 +281,11 @@
 
   function renderPhraseCard(plan, phrase) {
     const status = Store.getPhrase(state, plan.m, phrase.p).status || 'todo';
-    const cycle = () => { Store.setPhraseStatus(state, plan.m, phrase.p, nextStatus(status)); render(); };
+    const cycle = (e) => {
+      if (e) e.stopPropagation();
+      Store.setPhraseStatus(state, plan.m, phrase.p, nextStatus(status));
+      render();
+    };
     return el('div', { class: 'card phrase-card' },
       el('div', { class: 'word-head' },
         el('div', {},
@@ -229,6 +295,97 @@
       el('p', { class: 'word-why' }, phrase.tip),
       el('button', { class: `btn btn-block ${status === 'mastered' ? 'btn-ghost' : 'btn-primary'}`, onclick: cycle },
         status === 'todo' ? '✋ Start modelling this' : status === 'teaching' ? '✓ They said it!' : '↺ Reset'));
+  }
+
+  // ---- Modal sheet -------------------------------------------------------
+
+  // Find the month plan a word/phrase belongs to.
+  const planOf = (m) => MONTHS.find((p) => p.m === m);
+
+  // Every word across the curriculum that practises a given sound.
+  function wordsForSound(focus) {
+    const out = [];
+    for (const plan of MONTHS) {
+      for (const w of plan.words) if (w.focus === focus) out.push({ plan, w });
+    }
+    return out;
+  }
+
+  function soundSheetBody(focus) {
+    const p = PHONEMES[focus];
+    const list = wordsForSound(focus);
+    const done = list.filter(({ plan, w }) => Store.getProgress(state, plan.m, w.w).status === 'mastered').length;
+    const going = list.filter(({ plan, w }) => Store.getProgress(state, plan.m, w.w).status === 'teaching').length;
+
+    return el('div', {},
+      el('div', { class: 'sheet-sound-head' },
+        el('div', { class: 'sheet-ipa' }, p.ipa),
+        el('div', {},
+          el('div', { class: 'sheet-sound-name' }, p.name),
+          el('div', { class: 'sheet-sound-age' }, `${BAND_LABEL[p.band]} · most children say this clearly ${p.byAge}`))),
+      el('div', { class: 'ph-how' },
+        el('div', { class: 'ph-how-title' }, 'What your mouth does'),
+        el('p', { class: 'ph-how-body' }, p.how),
+        el('div', { class: 'ph-mouth' }, p.mouth)),
+      p.contrast && p.contrast.length
+        ? el('div', { class: 'ph-tip' }, el('strong', {}, 'Try this: '), p.contrast[0])
+        : null,
+      el('div', { class: 'sheet-count' },
+        `${list.length} word${list.length === 1 ? '' : 's'} practise this sound · ${done} mastered · ${going} in progress`),
+      el('div', { class: 'sheet-list' },
+        list.map(({ plan, w }) => {
+          const st = Store.getProgress(state, plan.m, w.w).status || 'todo';
+          return el('button', {
+            class: 'sheet-row',
+            onclick: () => openModal({ type: 'word', month: plan.m, word: w.w }),
+          },
+            el('div', { class: 'sheet-row-main' },
+              el('div', { class: 'sheet-row-word' }, w.w),
+              el('div', { class: 'sheet-row-sub' }, `${w.say} · month ${plan.m} · ${w.c}`)),
+            statusPill(st),
+            el('span', { class: 'sheet-chev' }, '›'));
+        })));
+  }
+
+  function renderModal() {
+    const top = modalStack[modalStack.length - 1];
+    if (!top) return null;
+
+    let title = '';
+    let body = null;
+
+    if (top.type === 'sound') {
+      const p = PHONEMES[top.focus];
+      if (!p) return null;
+      // `label` covers the two entries whose `ipa` is a notation, not a symbol.
+      title = `Words with ${p.label || p.ipa}`;
+      body = soundSheetBody(top.focus);
+    } else if (top.type === 'word') {
+      const plan = planOf(top.month);
+      const word = plan && plan.words.find((w) => w.w === top.word);
+      if (!word) return null;
+      title = `Month ${plan.m} · ${plan.title}`;
+      body = renderWordCard(plan, word, { full: true });
+    } else if (top.type === 'phrase') {
+      const plan = planOf(top.month);
+      const phrase = plan && (plan.phrases || []).find((p) => p.p === top.phrase);
+      if (!phrase) return null;
+      title = `Month ${plan.m} · phrase to model`;
+      body = renderPhraseCard(plan, phrase);
+    }
+
+    const sheet = el('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+      el('div', { class: 'sheet-bar' },
+        modalStack.length > 1
+          ? el('button', { class: 'sheet-btn', onclick: backModal, 'aria-label': 'Back' }, '‹ Back')
+          : el('span', { class: 'sheet-spacer' }),
+        el('div', { class: 'sheet-title' }, title),
+        el('button', { class: 'sheet-btn', onclick: closeModals, 'aria-label': 'Close' }, '✕')),
+      el('div', { class: 'sheet-body' }, body));
+
+    const backdrop = el('div', { class: 'sheet-backdrop' }, sheet);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModals(); });
+    return backdrop;
   }
 
   // ---- Home shell --------------------------------------------------------
@@ -356,14 +513,18 @@
     }
     const soundCard = el('div', { class: 'card' },
       el('h3', { class: 'how-title' }, 'Speech sounds covered'),
-      el('p', { class: 'hint' }, 'Sounds you have started practising, grouped by when children typically master them.'),
+      el('p', { class: 'hint' }, 'Grouped by when children typically master them. Tap a sound to see every word that practises it.'),
       Object.entries(bands).map(([band, list]) =>
         list.length
           ? el('div', { class: 'sound-band' },
               el('div', { class: 'sound-band-label' }, BAND_LABEL[band]),
               el('div', { class: 'sound-chips' },
-                list.sort((a, b) => b.rec.started - a.rec.started).map(({ p, rec }) =>
-                  el('span', { class: `sound-chip ${rec.started ? 'sound-on' : ''}`, title: p.name }, p.ipa))))
+                list.sort((a, b) => b.rec.started - a.rec.started).map(({ key, p, rec }) =>
+                  el('button', {
+                    class: `sound-chip ${rec.started ? 'sound-on' : ''}`,
+                    title: `${p.name} — ${rec.started} of ${rec.total} words started`,
+                    onclick: () => openModal({ type: 'sound', focus: key }),
+                  }, p.ipa))))
           : null));
 
     // Recent activity
@@ -371,12 +532,19 @@
     const recentCard = recent.length
       ? el('div', { class: 'card' },
           el('h3', { class: 'how-title' }, 'Recently worked on'),
+          el('p', { class: 'hint' }, 'Tap any of these to reopen its card.'),
           recent.map((r) =>
-            el('div', { class: 'prog-row' },
+            el('button', {
+              class: 'prog-row prog-row-tap',
+              onclick: () => openModal(r.kind === 'phrase'
+                ? { type: 'phrase', month: r.month, phrase: r.label }
+                : { type: 'word', month: r.month, word: r.label }),
+            },
               el('span', { class: 'prog-word' },
                 r.kind === 'phrase' ? `“${r.label}”` : r.label,
                 el('span', { class: 'prog-month' }, ` · month ${r.month}`)),
-              statusPill(r.status))))
+              statusPill(r.status),
+              el('span', { class: 'sheet-chev' }, '›'))))
       : el('div', { class: 'card' },
           el('p', { class: 'empty' }, 'Nothing started yet. Tap “Start teaching this” on today’s word and your dashboard will fill up. 🌱'));
 
@@ -398,7 +566,8 @@
             el('div', { class: 'progress-bar', style: `width:${mp.total ? (mp.mastered / mp.total) * 100 : 0}%` })),
           el('div', { class: 'bar-pct' }, `${mp.mastered}/${mp.total}`))),
       el('h3', { class: 'section-title' }, `This month's words (${plan.words.length})`),
-      plan.words.map((w) => renderWordCard(plan, w)),
+      el('p', { class: 'section-note' }, 'Tap a word for how to say it and ways to teach it.'),
+      plan.words.map((w) => renderWordCard(plan, w, { expandable: true })),
       plan.phrases && plan.phrases.length
         ? el('div', {},
             el('h3', { class: 'section-title' }, 'Phrases to model'),
@@ -424,7 +593,8 @@
           el('div', { class: 'month-badge' }, `Month ${plan.m} · ${bandFor(plan.m).label}`),
           el('div', { class: 'stage-headline' }, plan.title),
           el('div', { class: 'stage-focus' }, plan.focus)),
-        plan.words.map((w) => renderWordCard(plan, w)),
+        el('p', { class: 'section-note' }, 'Tap a word for how to say it and ways to teach it.'),
+        plan.words.map((w) => renderWordCard(plan, w, { expandable: true })),
         (plan.phrases || []).map((p) => renderPhraseCard(plan, p))));
   }
 
@@ -479,6 +649,11 @@
   // ---- Boot --------------------------------------------------------------
 
   render();
+
+  // Escape steps back out of the sheet, one level at a time.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalStack.length) backModal();
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));

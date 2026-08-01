@@ -37,6 +37,9 @@
 
 * { box-sizing: border-box; }
 
+/* Page behind an open sheet must not scroll. */
+body.modal-open { overflow: hidden; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -313,6 +316,100 @@ body {
 .prog-month { color: var(--ink-soft); font-weight: 400; font-size: 13px; }
 
 /* ---------- Phrase cards ---------- */
+
+/* ---------- Expandable word cards ---------- */
+
+.word-head-main { min-width: 0; }
+.tap-region { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 14px; margin: -4px; padding: 4px; }
+.tap-region:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.word-card:not(.is-open) .word-why { margin-bottom: 10px; }
+
+.disclosure {
+  width: 100%;
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  color: var(--ink-soft);
+  border-radius: 13px;
+  padding: 11px;
+  font-size: 13.5px;
+  font-weight: 650;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.disclosure:hover { color: var(--ink); border-color: var(--accent); }
+
+/* ---------- Modal sheet ---------- */
+
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(30, 20, 50, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade 0.18s ease;
+}
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+
+.sheet {
+  width: 100%; max-width: 520px;
+  max-height: 88vh; max-height: 88dvh;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  display: flex; flex-direction: column;
+  animation: rise 0.22s ease;
+  box-shadow: 0 -10px 40px rgba(40, 25, 70, 0.3);
+}
+.sheet-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.sheet-title { flex: 1; text-align: center; font-size: 14px; font-weight: 700; min-width: 0; }
+.sheet-btn {
+  background: var(--card); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 11px; padding: 7px 12px; font-size: 13.5px; font-weight: 650;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.sheet-spacer { width: 42px; }
+.sheet-body {
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px 16px calc(env(safe-area-inset-bottom) + 20px);
+}
+.sheet-body > .card:last-child { margin-bottom: 0; }
+
+.sheet-sound-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.sheet-ipa {
+  font-size: 24px; font-weight: 800; color: var(--accent);
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px; padding: 12px 16px; white-space: nowrap;
+}
+.sheet-sound-name { font-size: 17px; font-weight: 700; }
+.sheet-sound-age { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+.sheet-count { font-size: 13px; color: var(--ink-soft); margin: 16px 0 10px; font-weight: 600; }
+
+.sheet-list { display: flex; flex-direction: column; gap: 8px; }
+.sheet-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; cursor: pointer; font-family: inherit; color: var(--ink);
+}
+.sheet-row:hover { border-color: var(--accent); }
+.sheet-row-main { flex: 1; min-width: 0; }
+.sheet-row-word { font-size: 15.5px; font-weight: 700; }
+.sheet-row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.sheet-chev { color: var(--ink-soft); font-size: 19px; line-height: 1; }
+
+.sheet .ph-how, .sheet .ph-tip { background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--line); }
+.sheet .ph-how { margin-bottom: 10px; }
+.sheet .ph-mouth { background: var(--bg); }
+
+button.sound-chip { cursor: pointer; font-family: inherit; }
+button.sound-chip:hover { border-color: var(--accent); opacity: 1; }
+
+.prog-row-tap { width: 100%; text-align: left; cursor: pointer; font-family: inherit; color: var(--ink); gap: 10px; }
+.prog-row-tap:hover { border-color: var(--accent); }
 
 .phrase-card { border-left: 4px solid var(--accent); }
 .phrase-text { font-size: 20px; font-weight: 750; letter-spacing: -0.2px; }
