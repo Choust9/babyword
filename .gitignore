@@ -1,0 +1,15 @@
+# Node / Capacitor (added when following MIGRATION.md Route A)
+node_modules/
+package-lock.json
+ios/App/Pods/
+ios/App/build/
+DerivedData/
+
+# macOS / editors
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Misc
+*.log

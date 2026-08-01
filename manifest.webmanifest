@@ -1,0 +1,18 @@
+{
+  "name": "Baby Word of the Day",
+  "short_name": "Baby Words",
+  "description": "A daily, age-appropriate word to teach your baby, with simple milestone-based activities and progress tracking.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf6f0",
+  "theme_color": "#ff8a5c",
+  "categories": ["education", "parenting", "kids"],
+  "icons": [
+    { "src": "./icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
