@@ -1,5 +1,6 @@
 /*
- * storage.js — persistence layer over localStorage.
+ * storage.js — persistence layer over localStorage, plus a shared
+ * cross-device sync layer (netlify/functions/sync.mts + Netlify Blobs).
  *
  * Everything the app remembers lives under one namespaced key so the whole
  * state exports as a single JSON blob. When this migrates to native iOS this
@@ -12,10 +13,19 @@
  *   phrases: "18::Daddy go" -> { status, startedISO, masteredISO }
  *
  * status is one of: 'todo' | 'teaching' | 'mastered'
+ *
+ * Sync model: both partners' devices read and write one shared record on the
+ * backend (there's no per-user login). `updatedISO` is a last-write-wins
+ * clock — whichever device saved most recently wins a sync, so this favours
+ * simplicity over conflict resolution. Fine for a couple taking turns marking
+ * words; a genuine concurrent edit on both phones at the same instant would
+ * have the later one win outright.
  */
 
 const STORAGE_KEY = 'babyWordOfTheDay.v2';
 const LEGACY_KEY = 'babyWordOfTheDay.v1';
+const SYNC_ENDPOINT = '/api/sync';
+const SYNC_PUSH_DELAY_MS = 1500;
 
 const DEFAULT_STATE = {
   baby: null,          // { name, birthISO }
@@ -23,6 +33,7 @@ const DEFAULT_STATE = {
   phrases: {},         // phrase key -> record
   history: {},         // dateISO -> word key surfaced that day
   createdISO: null,
+  updatedISO: null, // last time this state was saved, anywhere — drives sync
 };
 
 function freshState() {
@@ -53,12 +64,57 @@ function loadState() {
   }
 }
 
-function saveState(state) {
+function saveState(state, { skipPush } = {}) {
+  state.updatedISO = new Date().toISOString();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     console.error('Could not save state.', err);
   }
+  if (!skipPush) schedulePush(state);
+}
+
+// ---- Cross-device sync (shared state, last-write-wins by updatedISO) ------
+
+let pushTimer = null;
+
+function pushRemote(state) {
+  fetch(SYNC_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(state),
+  }).catch((err) => console.warn('Could not sync to the other device.', err));
+}
+
+function schedulePush(state) {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => pushRemote(state), SYNC_PUSH_DELAY_MS);
+}
+
+async function pullRemote() {
+  try {
+    const res = await fetch(SYNC_ENDPOINT);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('Could not reach the other device\'s data.', err);
+    return null;
+  }
+}
+
+// Call once at boot, and again whenever the app resumes (e.g. reopened from
+// the home screen), to pick up anything saved from the other person's device.
+// Returns the state that should now be considered current.
+async function syncOnLoad(state) {
+  const remote = await pullRemote();
+  if (!remote) return state;
+  if (!state.updatedISO || (remote.updatedISO && remote.updatedISO > state.updatedISO)) {
+    const merged = { ...DEFAULT_STATE, ...remote };
+    saveState(merged, { skipPush: true });
+    return merged;
+  }
+  if (remote.updatedISO !== state.updatedISO) pushRemote(state);
+  return state;
 }
 
 const wordKey = (month, word) => `${month}::${word}`;
@@ -176,4 +232,5 @@ window.Store = {
   getProgress, getPhrase, setStatus, setPhraseStatus,
   summarise, monthProgress,
   exportState, importState, resetState,
+  syncOnLoad,
 };

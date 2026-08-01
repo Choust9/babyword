@@ -163,9 +163,12 @@ would need extending alongside.
 - [ ] App icons at all required sizes (start from `icons/icon-512.png`).
 - [ ] Launch screen / storyboard.
 - [ ] App Store screenshots (6.7", 6.1", iPad if supported).
-- [ ] **Privacy**: this app collects no data and sends nothing off-device —
-      declare "Data Not Collected" in App Privacy. If you later add analytics or
-      cloud sync, update the nutrition label and add a privacy policy URL.
+- [ ] **Privacy**: baby profile and progress now sync to a Netlify Blobs store
+      (see `netlify/functions/sync.mts`) so both parents share one record —
+      no accounts, no third parties, no analytics. Declare this honestly in
+      App Privacy (data linked to the user: baby name/DOB and word progress,
+      not shared with third parties) rather than "Data Not Collected", and
+      add a short privacy policy URL describing it.
 - [ ] **Kids Category / age rating**: because the audience is parents of young
       children, review Apple's Kids Category guidelines. If you market it *to*
       children or place it in the Kids Category, you must not include

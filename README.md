@@ -50,8 +50,10 @@ repeating yourself.
 
 **Library** — browse all 37 months; look ahead or revisit.
 
-**Private by default** — everything stays on the device. Export/import your
-progress as JSON to back it up or move devices.
+**Shared between two devices, no account needed** — progress is saved locally
+and synced to a small Netlify Blobs-backed endpoint (`netlify/functions/sync.mts`)
+so both parents see the same baby's progress. Export/import your progress as
+JSON too, for a manual backup or a one-off device move.
 
 **Installable & offline** — it's a PWA: "Add to Home Screen" on an iPhone and
 it runs full-screen with no browser chrome, even with no signal.

@@ -3,10 +3,15 @@
   "version": "2.0.0",
   "description": "A daily, age-appropriate word to teach your baby, with British English phonics coaching and progress tracking.",
   "private": true,
+  "type": "commonjs",
   "scripts": {
     "check": "node scripts/check-data.js",
     "icons": "python3 scripts/make_icons.py",
     "start": "python3 -m http.server 8099"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@netlify/blobs": "^10.7.11",
+    "@netlify/functions": "^5.3.0"
+  }
 }

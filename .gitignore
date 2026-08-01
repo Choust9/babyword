@@ -13,3 +13,7 @@ DerivedData/
 
 # Misc
 *.log
+
+# Local Netlify folder
+.netlify
+deno.lock
