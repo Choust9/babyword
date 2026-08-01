@@ -134,6 +134,34 @@ Regenerate the app icons (pure-Python, no libraries needed):
 npm run icons      # python3 scripts/make_icons.py
 ```
 
+## Deploying it
+
+The app is plain static files and needs no build step to run — but most hosts
+detect a `package.json`, guess a framework, and run `npm run build` expecting an
+output directory. So there is a build script that validates the curriculum and
+copies the site into `dist/`:
+
+```bash
+npm run build      # -> dist/
+```
+
+Configure your host with:
+
+| Setting | Value |
+|---|---|
+| Framework | **Other** / Static (do **not** let it pick React — there is no React here) |
+| Install command | `npm install` |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+
+If your host has no build step at all, skip the build entirely and serve the
+repo root (`./`) as static files — that works too.
+
+> If a deploy fails with `npm error Missing script: "build"`, the host has
+> auto-detected the wrong framework and is running a build this project didn't
+> have. Either set the framework to Static, or pull this branch, which now
+> provides the `build` script.
+
 ## Add it to an iPhone home screen (today, no App Store)
 
 1. Host the folder somewhere over HTTPS (GitHub Pages, Netlify, Vercel — all
@@ -160,6 +188,7 @@ icons/                   Generated PNG app icons
 scripts/
   make_icons.py          Dependency-free icon generator
   check-data.js          Curriculum validation (npm run check)
+  build.js               Assembles dist/ for static hosts (npm run build)
 CONTENT-DESIGN.md        Why the curriculum is built this way + the evidence
 MIGRATION.md             How to take this from GitHub to the App Store
 ```

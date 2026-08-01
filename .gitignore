@@ -1,3 +1,6 @@
+# Build output (npm run build assembles the deployable site here)
+dist/
+
 # Node / Capacitor (added when following MIGRATION.md Route A)
 node_modules/
 package-lock.json

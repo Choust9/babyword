@@ -4,6 +4,7 @@
   "description": "A daily, age-appropriate word to teach your baby, with British English phonics coaching and progress tracking.",
   "private": true,
   "scripts": {
+    "build": "node scripts/build.js",
     "check": "node scripts/check-data.js",
     "icons": "python3 scripts/make_icons.py",
     "start": "python3 -m http.server 8099"
