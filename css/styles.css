@@ -254,6 +254,7 @@ body {
 .hidden-file { display: none; }
 .hidden { display: none; }
 .foot-note { text-align: center; color: var(--ink-soft); font-size: 12.5px; margin-top: 18px; }
+.foot-version { text-align: center; color: var(--ink-soft); font-size: 11px; margin-top: 6px; opacity: 0.6; letter-spacing: 0.3px; }
 .section-title { font-size: 15px; font-weight: 750; margin: 22px 0 6px; }
 .section-note { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; margin: 0 0 14px; }
 

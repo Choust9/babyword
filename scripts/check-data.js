@@ -80,8 +80,12 @@ for (const plan of MONTHS) {
     for (const k of ['w', 'c', 'ipa', 'say', 'focus', 'why', 'acts']) {
       if (!w[k]) errors.push(`${at}: missing "${k}"`);
     }
-    if (!Array.isArray(w.acts) || w.acts.length < 2) {
-      errors.push(`${at}: needs at least 2 activities`);
+    if (!Array.isArray(w.acts) || w.acts.length < 3) {
+      errors.push(`${at}: needs 3 activities, has ${(w.acts || []).length}`);
+    }
+    // Three ideas that say the same thing are not three ideas.
+    if (Array.isArray(w.acts) && new Set(w.acts).size !== w.acts.length) {
+      errors.push(`${at}: duplicate activities`);
     }
     if (w.focus && !PHONEMES[w.focus]) {
       errors.push(`${at}: unknown focus sound "${w.focus}"`);

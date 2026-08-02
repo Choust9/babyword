@@ -19,7 +19,7 @@
  * `npm run check` enforces it.
  */
 
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const CACHE_VERSION = `babblr-${APP_VERSION}`;
 
 const ASSETS = [
@@ -49,11 +49,21 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
+    await self.clients.claim();
+
+    // Any page open right now is still showing assets from the cache we just
+    // deleted, and — if it was served by the old cache-first worker — contains
+    // no update logic of its own. Drive the reload from here so the new build
+    // lands on the first visit rather than the second. activate only runs once
+    // per worker version, so this cannot loop.
+    const windows = await self.clients.matchAll({ type: 'window' });
+    for (const client of windows) {
+      if (client.url) client.navigate(client.url).catch(() => {});
+    }
+  })());
 });
 
 self.addEventListener('fetch', (event) => {

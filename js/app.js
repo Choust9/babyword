@@ -258,7 +258,11 @@
           : null,
         el('p', { class: 'hint' }, 'We use the date of birth to pick the right month plan.'),
         start),
-      el('p', { class: 'foot-note' }, `${MONTHS.length} monthly plans · ${MONTHS.reduce((n, m) => n + m.words.length, 0)} words · grounded in speech-development research`));
+      el('p', { class: 'foot-note' },
+        `${MONTHS.length} monthly plans · ${MONTHS.reduce((n, m) => n + m.words.length, 0)} words · grounded in speech-development research`),
+      // Visible on the very first screen so a screenshot always identifies the
+      // build. A device stuck on a cached copy shows an older number here.
+      el('p', { class: 'foot-version' }, `Babblr v${window.BABBLR_VERSION || '?'}`));
   }
 
   // ---- Shared pieces -----------------------------------------------------
