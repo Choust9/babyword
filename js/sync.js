@@ -26,7 +26,7 @@
 (function () {
   'use strict';
 
-  const cfg = window.BABBLER_CONFIG || {};
+  const cfg = window.BABBLR_CONFIG || {};
   const CONFIGURED = !!(
     cfg.endpoint && cfg.projectId && cfg.databaseId &&
     cfg.babiesCollectionId && cfg.progressCollectionId

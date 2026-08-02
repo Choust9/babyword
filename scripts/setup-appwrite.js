@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /*
- * setup-appwrite.js — create and configure Babbler's database in one command.
+ * setup-appwrite.js — create and configure Babblr's database in one command.
  *
  * Creates:
- *   database    "Babbler"
+ *   database    "Babblr"
  *   collection  "babies"    one row per baby, with live counts
  *   collection  "progress"  one row per word or phrase taught (the audit trail)
  * plus every attribute, an index for the lookups the app makes, and the
@@ -26,7 +26,7 @@ const ENDPOINT = (process.env.APPWRITE_ENDPOINT || '').replace(/\/$/, '');
 const PROJECT = process.env.APPWRITE_PROJECT || '';
 const API_KEY = process.env.APPWRITE_API_KEY || '';
 
-const DB_ID = process.env.APPWRITE_DATABASE_ID || 'babbler';
+const DB_ID = process.env.APPWRITE_DATABASE_ID || 'babblr';
 const BABIES = process.env.APPWRITE_BABIES_ID || 'babies';
 const PROGRESS = process.env.APPWRITE_PROGRESS_ID || 'progress';
 
@@ -106,11 +106,11 @@ async function waitForAttributes(col, keys) {
 }
 
 (async () => {
-  console.log(`\nBabbler → Appwrite setup\n  ${ENDPOINT}  project ${PROJECT}\n`);
+  console.log(`\nBabblr → Appwrite setup\n  ${ENDPOINT}  project ${PROJECT}\n`);
 
   console.log('Database');
   await ensure(`database "${DB_ID}"`, () =>
-    api('POST', '/databases', { databaseId: DB_ID, name: 'Babbler' }));
+    api('POST', '/databases', { databaseId: DB_ID, name: 'Babblr' }));
 
   console.log('\nCollections');
   await ensure(`collection "${BABIES}"`, () =>
@@ -160,7 +160,7 @@ async function waitForAttributes(col, keys) {
   console.log(`
 Done. Paste these into js/config.js:
 
-window.BABBLER_CONFIG = {
+window.BABBLR_CONFIG = {
   endpoint: '${ENDPOINT}',
   projectId: '${PROJECT}',
   databaseId: '${DB_ID}',

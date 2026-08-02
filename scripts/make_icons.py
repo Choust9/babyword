@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Babbler's app icons with no third-party dependencies (stdlib zlib).
+"""Generate Babblr's app icons with no third-party dependencies (stdlib zlib).
 
 Design: a warm sun->coral gradient rounded square holding a baby's head (circle
 plus a curl of hair) with a speech bubble rising from it, three dots inside the

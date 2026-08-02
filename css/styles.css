@@ -1,4 +1,4 @@
-/* Babbler — styles
+/* Babblr — styles
  * A warm, soft, rounded design that feels friendly to sleep-deprived parents.
  * Uses system fonts (fast, native-feeling) and full light/dark support.
  */
@@ -138,6 +138,43 @@ body {
 .field-error { border-color: var(--danger); animation: shake 0.3s; }
 @keyframes shake { 25% { transform: translateX(-4px);} 75% { transform: translateX(4px);} }
 .hint { color: var(--ink-soft); font-size: 13px; line-height: 1.5; margin: 12px 0 4px; }
+
+/* ---------- Brand ---------- */
+
+/* Persistent identity: without this the app name only ever appeared on the
+   onboarding screen, so once you were in it could have been anything. */
+.brandbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.brand { display: flex; align-items: center; gap: 9px; }
+.brand-mark { display: flex; border-radius: 9px; overflow: hidden; box-shadow: 0 3px 10px rgba(80, 60, 120, 0.18); }
+.brand-mark .logo-svg { display: block; }
+.wordmark {
+  font-size: 19px; font-weight: 800; letter-spacing: -0.4px;
+  /* Coral -> violet, not sun -> coral: the sun yellow is barely legible on the
+     cream background. The mark beside it already carries the sun gradient. */
+  background: linear-gradient(100deg, var(--primary), var(--accent));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: var(--primary);
+}
+
+.brand-foot {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  color: var(--ink-soft); font-size: 12px; font-weight: 600;
+  margin: 26px 0 4px; opacity: 0.75;
+}
+.brand-foot-mark { display: flex; border-radius: 5px; overflow: hidden; }
+.brand-foot-mark .logo-svg { display: block; }
+
+.about-brand { display: flex; align-items: center; gap: 13px; margin-bottom: 14px; }
+.about-mark { display: flex; border-radius: 15px; overflow: hidden; box-shadow: var(--shadow); }
+.about-mark .logo-svg { display: block; }
+.about-name { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.about-tag {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--primary); margin-top: 2px;
+}
 
 /* ---------- Home header & tabs ---------- */
 

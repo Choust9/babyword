@@ -1,4 +1,4 @@
-# Babbler
+# Babblr
 
 **Baby word of the day.** A daily, age-appropriate word to teach your baby — with simple, concrete ways
 to bring it to life, plus a checklist so you always know which words you've

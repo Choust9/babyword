@@ -192,7 +192,7 @@
   function logoMark(size = 84) {
     // Unique gradient id per instance: two marks can share a page (onboarding
     // and the banner), and duplicate ids are invalid.
-    const gid = `babblerGrad${++logoSeq}`;
+    const gid = `babblrGrad${++logoSeq}`;
     const svg = svgEl('svg', { viewBox: '0 0 100 100', width: size, height: size, class: 'logo-svg', 'aria-hidden': 'true' });
     const defs = svgEl('defs');
     const grad = svgEl('linearGradient', { id: gid, x1: '0', y1: '0', x2: '0', y2: '1' });
@@ -242,7 +242,7 @@
     return el('section', { class: 'onboard' },
       el('div', { class: 'onboard-hero' },
         el('div', { class: 'logo-badge' }, logoMark(84)),
-        el('h1', { class: 'onboard-title' }, 'Babbler'),
+        el('h1', { class: 'onboard-title' }, 'Babblr'),
         el('p', { class: 'onboard-tag' }, 'Baby word of the day'),
         el('p', { class: 'onboard-sub' },
           'A daily, age-appropriate word to teach your little one — with the ' +
@@ -523,13 +523,18 @@
     const plan = planForMonth(months);
     if (browseMonth === null) browseMonth = plan.m;
 
-    const header = el('header', { class: 'top' },
-      el('div', {},
-        el('div', { class: 'greeting' }, state.baby.name),
-        el('div', { class: 'age' },
-          `${ageLabel(state.baby.birthISO)} · ${bandFor(months).label}`,
-          syncBadge())),
-      el('button', { class: 'icon-btn', title: 'Settings', onclick: () => { activeTab = 'settings'; render(); } }, '⚙️'));
+    const header = el('div', {},
+      el('div', { class: 'brandbar' },
+        el('div', { class: 'brand' },
+          el('span', { class: 'brand-mark' }, logoMark(28)),
+          el('span', { class: 'wordmark' }, 'Babblr')),
+        el('button', { class: 'icon-btn', title: 'Settings', onclick: () => { activeTab = 'settings'; render(); } }, '⚙️')),
+      el('header', { class: 'top' },
+        el('div', {},
+          el('div', { class: 'greeting' }, state.baby.name),
+          el('div', { class: 'age' },
+            `${ageLabel(state.baby.birthISO)} · ${bandFor(months).label}`,
+            syncBadge()))));
 
     const TABS = [['today', 'Today'], ['dashboard', 'Dashboard'], ['plan', 'Plan'], ['library', 'Library']];
     const tabs = el('nav', { class: 'tabs' },
@@ -550,6 +555,10 @@
 
   function renderToday(plan) {
     const word = wordOfTheDay(plan);
+    const signoff = el('p', { class: 'brand-foot' },
+      el('span', { class: 'brand-foot-mark' }, logoMark(18)),
+      'Babblr · a word a day');
+
     return el('div', { class: 'tab-body' },
       renderWordCard(plan, word, { featured: true }),
       el('div', { class: 'card stage-card' },
@@ -560,7 +569,8 @@
         el('div', { class: 'milestones' },
           el('div', { class: 'milestones-title' }, 'Around now, many babies…'),
           el('ul', {}, plan.milestones.map((m) => el('li', {}, m))))),
-      renderTechniques(plan));
+      renderTechniques(plan),
+      signoff);
   }
 
   // ---- Dashboard ---------------------------------------------------------
@@ -963,8 +973,12 @@
         } }, '⬇️ Export progress (backup)'),
         el('button', { class: 'btn btn-ghost btn-block', onclick: () => fileInput.click() }, '⬆️ Import progress'),
         fileInput),
-      el('div', { class: 'card' },
-        el('h3', { class: 'how-title' }, 'About'),
+      el('div', { class: 'card about-card' },
+        el('div', { class: 'about-brand' },
+          el('span', { class: 'about-mark' }, logoMark(52)),
+          el('div', {},
+            el('div', { class: 'about-name' }, 'Babblr'),
+            el('div', { class: 'about-tag' }, 'Baby word of the day'))),
         el('p', { class: 'hint' },
           `${MONTHS.length} monthly plans · ${MONTHS.reduce((n, m) => n + m.words.length, 0)} words · ` +
           `${MONTHS.reduce((n, m) => n + (m.phrases || []).length, 0)} phrase patterns.`),

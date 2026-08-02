@@ -1,7 +1,7 @@
 /*
  * config.js — optional Appwrite settings for shared, cross-device progress.
  *
- * Leave these blank and Babbler works exactly as before: everything stays in
+ * Leave these blank and Babblr works exactly as before: everything stays in
  * localStorage on the one device. Fill them in and progress is also stored in
  * an Appwrite database as readable rows you can inspect in the console.
  *
@@ -14,12 +14,12 @@
  * appears in the page source.
  */
 
-window.BABBLER_CONFIG = {
+window.BABBLR_CONFIG = {
   // e.g. 'https://fra.cloud.appwrite.io/v1'  (no trailing slash)
   endpoint: '',
   // Appwrite project ID
   projectId: '',
-  // The database (the setup script names it "Babbler")
+  // The database (the setup script names it "Babblr")
   databaseId: '',
   // One document per baby
   babiesCollectionId: '',

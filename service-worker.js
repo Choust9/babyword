@@ -1,10 +1,10 @@
 /*
- * service-worker.js — makes Babbler installable and fully offline.
+ * service-worker.js — makes Babblr installable and fully offline.
  * Uses a simple "cache-first, then network" strategy. Bump CACHE_VERSION
  * whenever you ship new assets so clients pick up the update.
  */
 
-const CACHE_VERSION = 'babbler-v4';
+const CACHE_VERSION = 'babblr-v5';
 const ASSETS = [
   './',
   './index.html',

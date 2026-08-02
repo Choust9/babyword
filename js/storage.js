@@ -14,7 +14,7 @@
  * status is one of: 'todo' | 'teaching' | 'mastered'
  */
 
-// Deliberately keeps the original key across the rename to Babbler —
+// Deliberately keeps the original key across the rename to Babblr —
 // changing it would orphan every existing user's saved progress.
 const STORAGE_KEY = 'babyWordOfTheDay.v2';
 const LEGACY_KEY = 'babyWordOfTheDay.v1';

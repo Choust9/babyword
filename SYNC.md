@@ -1,6 +1,6 @@
 # Shared progress across devices
 
-By default Babbler stores everything in `localStorage`, which is **per device
+By default Babblr stores everything in `localStorage`, which is **per device
 and per browser**. Your phone and your partner's phone keep entirely separate
 progress, and clearing Safari's website data wipes it.
 
@@ -35,10 +35,10 @@ is safe: anything that already exists is skipped.
 ### 3. Paste the printed config into `js/config.js`
 
 ```js
-window.BABBLER_CONFIG = {
+window.BABBLR_CONFIG = {
   endpoint: 'https://fra.cloud.appwrite.io/v1',
   projectId: '…',
-  databaseId: 'babbler',
+  databaseId: 'babblr',
   babiesCollectionId: 'babies',
   progressCollectionId: 'progress',
 };
@@ -47,7 +47,7 @@ window.BABBLER_CONFIG = {
 ### 4. Register the site as a Web platform
 
 **Project settings → Platforms → Add platform → Web app**, and enter the
-hostname you serve from (e.g. `babbler.appwrite.network`, plus `localhost` for
+hostname you serve from (e.g. `babblr.appwrite.network`, plus `localhost` for
 testing). Without this the browser blocks every request with a CORS error.
 
 Redeploy. Open **Settings → Shared progress**: you should see a green
@@ -96,7 +96,7 @@ the row, so the history stays intact and `Delete` permission is not needed.
 
 ### Watching data flow in
 
-In the Appwrite console open **Databases → babbler → progress**, sort by
+In the Appwrite console open **Databases → babblr → progress**, sort by
 `updatedAt` descending, and you will see each word appear as you tap it in the
 app. Filter by `babyId` to see one child, or by `status` to list everything
 mastered.
