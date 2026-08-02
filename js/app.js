@@ -805,6 +805,15 @@
 
   // ---- Settings ----------------------------------------------------------
 
+  // Result of the last "Test connection" run, shown inline in Settings.
+  let selfTestResults = null;
+  async function runSelfTest() {
+    selfTestResults = [{ label: 'Running…', ok: true, detail: '' }];
+    render();
+    selfTestResults = await window.Sync.selfTest();
+    render();
+  }
+
   const SYNC_LABEL = {
     off:     ['Local only',   'sync-off'],
     idle:    ['Connecting…',  'sync-idle'],
@@ -888,6 +897,16 @@
               'make it private.'),
         el('button', { class: 'btn btn-ghost btn-block', onclick: applyCode }, '✓ Apply family code'),
         el('button', { class: 'btn btn-ghost btn-block', onclick: () => window.Sync.syncNow() }, '↻ Sync now'),
+        el('button', { class: 'btn btn-ghost btn-block', onclick: runSelfTest }, '🔍 Test connection'),
+        selfTestResults
+          ? el('div', { class: 'test-out' },
+              selfTestResults.map((r) =>
+                el('div', { class: `test-row ${r.ok ? 'test-ok' : 'test-bad'}` },
+                  el('span', { class: 'test-icon' }, r.ok ? '✓' : '✗'),
+                  el('div', {},
+                    el('div', { class: 'test-label' }, r.label),
+                    r.detail ? el('div', { class: 'test-detail' }, r.detail) : null))))
+          : null,
         el('p', { class: 'hint' },
           'Reminder settings stay on this device — a banner you dismiss should ' +
           'not disappear for everyone else.')));

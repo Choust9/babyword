@@ -150,6 +150,7 @@ Create the Appwrite database for shared progress (safe to re-run):
 
 ```bash
 APPWRITE_ENDPOINT=... APPWRITE_PROJECT=... APPWRITE_API_KEY=... npm run setup:appwrite
+npm run verify:appwrite    # prove reads, writes and queries all work
 ```
 
 ## Deploying it
@@ -210,6 +211,7 @@ scripts/
   check-data.js          Curriculum validation (npm run check)
   build.js               Assembles dist/ for static hosts (npm run build)
   setup-appwrite.js      Creates the sync database + collections (npm run setup:appwrite)
+  verify-appwrite.js     Proves the link works end to end (npm run verify:appwrite)
 CONTENT-DESIGN.md        Why the curriculum is built this way + the evidence
 SYNC.md                  Setting up shared cross-device progress in Appwrite
 MIGRATION.md             How to take this from GitHub to the App Store

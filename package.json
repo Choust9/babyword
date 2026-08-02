@@ -7,6 +7,7 @@
     "build": "node scripts/build.js",
     "check": "node scripts/check-data.js",
     "setup:appwrite": "node scripts/setup-appwrite.js",
+    "verify:appwrite": "node scripts/verify-appwrite.js",
     "icons": "python3 scripts/make_icons.py",
     "start": "python3 -m http.server 8099"
   },

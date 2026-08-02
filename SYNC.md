@@ -50,6 +50,26 @@ window.BABBLR_CONFIG = {
 hostname you serve from (e.g. `babblr.appwrite.network`, plus `localhost` for
 testing). Without this the browser blocks every request with a CORS error.
 
+### 5. Verify the link
+
+```bash
+npm run verify:appwrite                      # round trip as the app sees it
+APPWRITE_API_KEY=... npm run verify:appwrite # also checks every attribute
+```
+
+It runs exactly the requests the app makes — read, create, read back, update,
+and query by `babyId` — against both collections, and names the fix for
+anything that fails (missing collection, missing permission, wrong endpoint).
+It exits non-zero on failure, so it works in CI.
+
+One thing it cannot test from Node is **CORS**. After deploying, open the app
+and use **Settings → Shared progress → Test connection**: the same checks run
+in the browser and will tell you if the hostname is not registered as a Web
+platform.
+
+Both leave a clearly-labelled `__selftest__` row behind if they cannot delete
+it; remove it in the console whenever you like.
+
 Redeploy. Open **Settings → Shared progress**: you should see a green
 **Shared** badge, the record id, and a live row count.
 
@@ -189,3 +209,4 @@ storage, making no requests. Nothing breaks; local progress is untouched.
 | "A family code needs HTTPS" | You are on plain HTTP; use HTTPS or localhost, or clear the code |
 | Two phones show different data | Compare the record id in Settings on both — a different name spelling *or a different family code* makes a different record |
 | Rows synced stays 0 | Nothing taught yet; rows appear as you mark words |
+| Not sure what is wrong | Run `npm run verify:appwrite`, then **Test connection** in the app — between them they cover every failure mode above |

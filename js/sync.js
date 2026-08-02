@@ -348,6 +348,90 @@
     await push();
   }
 
+  /* ---- Self test -------------------------------------------------------- */
+
+  // Runs the same requests the app makes and reports each step. Worth having
+  // in the browser as well as in scripts/verify-appwrite.js, because CORS and
+  // the Web platform registration can only fail here.
+  async function selfTest() {
+    const steps = [];
+    const step = (label, okay, detail) => { steps.push({ label, ok: okay, detail }); return okay; };
+
+    if (!CONFIGURED) {
+      step('Configured', false, 'js/config.js has a blank field — sync is off');
+      return steps;
+    }
+    step('Configured', true, `${cfg.databaseId} · ${cfg.babiesCollectionId} / ${cfg.progressCollectionId}`);
+
+    // 1. Reachability + CORS. A 404 for a missing document is the success case,
+    // so it must not fall into the early return with the genuine failures.
+    let reachable = false;
+    try {
+      await api(colUrl(cfg.progressCollectionId, '__does_not_exist__'));
+      reachable = step('Reachable', true, 'endpoint answered');
+    } catch (err) {
+      const why = `${err.message || ''}`.toLowerCase();
+      if (err.code === 404 && /collection/.test(why)) {
+        step('Collection exists', false, `"${cfg.progressCollectionId}" not found — run npm run setup:appwrite`);
+      } else if (err.code === 404 && /database/.test(why)) {
+        step('Database exists', false, `"${cfg.databaseId}" not found — run npm run setup:appwrite`);
+      } else if (err.code === 404) {
+        reachable = step('Reachable, read allowed', true, 'endpoint and ids resolve');
+      } else if (err.code === 401) {
+        step('Read permission', false, 'grant read("any") on the collections');
+      } else if (!err.code) {
+        step('Reachable', false,
+          'Blocked before a reply — almost always CORS. Add this site\'s hostname under ' +
+          'Project settings → Platforms → Web app.');
+      } else {
+        step('Reachable', false, err.message);
+      }
+    }
+    if (!reachable) return steps;
+
+    // 2. Write + read back + query, using a clearly-labelled throwaway row.
+    const testId = 'p__selftest__browser';
+    const stamp = new Date().toISOString();
+    try {
+      await upsert(cfg.progressCollectionId, testId, {
+        babyId: '__selftest__', kind: 'word', month: 0, item: 'Self test',
+        status: 'todo', startedAt: null, masteredAt: null, updatedAt: stamp,
+      });
+      step('Write', true, 'created/updated a test row');
+    } catch (err) {
+      step('Write', false, err.code === 401 ? 'grant create("any") and update("any")' : err.message);
+      return steps;
+    }
+
+    try {
+      const back = await api(colUrl(cfg.progressCollectionId, testId));
+      step('Read back', back.updatedAt === stamp, back.updatedAt === stamp ? 'fields persisted' : 'row read but fields did not persist');
+    } catch (err) {
+      step('Read back', false, err.message);
+    }
+
+    try {
+      const found = await listRows('__selftest__');
+      step('Query by baby', found.length > 0,
+        found.length ? `${found.length} row(s), ${queryStyle} query format` : 'filter matched nothing');
+    } catch (err) {
+      step('Query by baby', false, err.message);
+    }
+
+    // 3. Confirm the real record round-trips too.
+    const state = getState();
+    const id = await resolveRecordId(state);
+    if (id) {
+      try {
+        const rows = await listRows(id);
+        step('Your record', true, `${id} — ${rows.length} row(s) stored`);
+      } catch (err) {
+        step('Your record', false, err.message);
+      }
+    }
+    return steps;
+  }
+
   /* ---- Lifecycle -------------------------------------------------------- */
 
   function start(getter, applier) {
@@ -371,6 +455,7 @@
     pull,
     push,
     syncNow,
+    selfTest,
     schedulePush,
     // Called when the family code changes: forget what we knew and re-sync.
     reset: () => { pulledFor = null; remoteSeen = {}; currentId = null; currentIdInput = null; },
