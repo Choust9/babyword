@@ -19,7 +19,7 @@
  * `npm run check` enforces it.
  */
 
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 const CACHE_VERSION = `babblr-${APP_VERSION}`;
 
 // index.html requests its assets with ?v=APP_VERSION, so precache the same
