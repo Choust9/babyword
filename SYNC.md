@@ -4,162 +4,188 @@ By default Babbler stores everything in `localStorage`, which is **per device
 and per browser**. Your phone and your partner's phone keep entirely separate
 progress, and clearing Safari's website data wipes it.
 
-This guide turns on a shared copy in an Appwrite database, so that **anyone who
-enters the same baby name and date of birth sees the same record, on any
-device** — with no accounts and no logins.
-
-```
-Name "Sophia" + DOB 23/01/2026   ->   document id  sophia-2026-01-23
-```
-
-Everyone who types those details reads and writes that one document.
+This guide turns on an Appwrite database as the **source of truth**, so that
+everyone in the family sees the same record on any device — with no accounts
+and no logins — and so that every word you teach shows up as a readable row you
+can inspect in the Appwrite console.
 
 ---
 
-## Why a database, not a storage bucket
+## Setup
 
-A Storage bucket (a "blob") holds opaque files. To change one word's status
-you would download the whole file, edit it, and upload it again — with no
-querying, no partial updates, and a much worse story when two phones write at
-once. A Databases collection gives you one document per baby, a readable record
-you can inspect in the Appwrite console, and room to add fields later.
+### 1. Create an API key
 
-Use the database.
+Appwrite console → **Project settings → API keys → Create API key**. Give it
+the `databases.read` and `databases.write` scopes. It is used only by the setup
+script below and never ships in the app.
 
----
+### 2. Run the setup script
 
-## Setup (about five minutes)
+```bash
+APPWRITE_ENDPOINT="https://fra.cloud.appwrite.io/v1" \
+APPWRITE_PROJECT="your-project-id" \
+APPWRITE_API_KEY="your-api-key" \
+npm run setup:appwrite
+```
 
-### 1. Create the database and collection
+It creates the database, both collections, every attribute, three indexes and
+the permissions — then prints the exact config block to paste in. Re-running it
+is safe: anything that already exists is skipped.
 
-In the Appwrite console:
-
-1. **Databases → Create database.** Name it `Babbler`. Note its **Database ID**.
-2. Inside it, **Create collection**. Name it `records`. Note its **Collection ID**.
-
-### 2. Add the attributes
-
-In the collection's **Attributes** tab, create four **String** attributes:
-
-| Key | Size | Required | Notes |
-|---|---|---|---|
-| `name` | 128 | no | the baby's name, for readability in the console |
-| `birth` | 32 | no | ISO date, e.g. `2026-01-23` |
-| `data` | 1000000 | no | the progress payload as JSON |
-| `updatedAt` | 32 | no | ISO timestamp of the last write |
-
-`data` is the important one — it holds the JSON blob of all word and phrase
-progress. A megabyte is far more than this app will ever need (the full
-library is 365 words).
-
-### 3. Set permissions
-
-In the collection's **Settings → Permissions**, add the role **Any** with
-**Create**, **Read** and **Update** ticked. Leave Delete off.
-
-This is what allows the app to work without accounts. See the security note
-below before you do this.
-
-### 4. Register the site as a Web platform
-
-**Project settings → Platforms → Add platform → Web app.** Enter the hostname
-your site is served from (e.g. `babbler.appwrite.network`, or `localhost` while
-testing). Without this, the browser blocks the requests with a CORS error.
-
-### 5. Fill in `js/config.js`
+### 3. Paste the printed config into `js/config.js`
 
 ```js
 window.BABBLER_CONFIG = {
-  endpoint: 'https://fra.cloud.appwrite.io/v1',   // your region; no trailing slash
-  projectId: 'xxxxxxxxxxxxxxxxxxxx',
-  databaseId: 'xxxxxxxxxxxxxxxxxxxx',             // the "Babbler" database
-  collectionId: 'xxxxxxxxxxxxxxxxxxxx',           // the "records" collection
+  endpoint: 'https://fra.cloud.appwrite.io/v1',
+  projectId: '…',
+  databaseId: 'babbler',
+  babiesCollectionId: 'babies',
+  progressCollectionId: 'progress',
 };
 ```
 
-Commit and redeploy. Open **Settings → Shared progress** in the app: it should
-show the record id and a green **Shared** badge.
+### 4. Register the site as a Web platform
+
+**Project settings → Platforms → Add platform → Web app**, and enter the
+hostname you serve from (e.g. `babbler.appwrite.network`, plus `localhost` for
+testing). Without this the browser blocks every request with a CORS error.
+
+Redeploy. Open **Settings → Shared progress**: you should see a green
+**Shared** badge, the record id, and a live row count.
 
 ---
 
-## How it behaves
+## The schema
+
+Two collections, designed so the console is readable at a glance rather than
+holding one opaque JSON blob.
+
+### `babies` — one row per child
+
+| Attribute | Type | Meaning |
+|---|---|---|
+| `name` | string(128) | the baby's name as entered |
+| `birth` | string(32) | ISO date, `2026-01-23` |
+| `createdAt` | string(32) | when the record was first made |
+| `updatedAt` | string(32) | last write from any device |
+| `wordsTeaching` | integer | live count, so progress is visible without opening rows |
+| `wordsMastered` | integer | " |
+| `phrasesTeaching` | integer | " |
+| `phrasesMastered` | integer | " |
+
+### `progress` — one row per word or phrase taught
+
+This is the audit trail. Every tap in the app becomes a row here.
+
+| Attribute | Type | Meaning |
+|---|---|---|
+| `babyId` | string(64) | which baby record this belongs to |
+| `kind` | string(16) | `word` or `phrase` |
+| `month` | integer | which monthly plan (0–36) |
+| `item` | string(128) | the word or phrase itself, e.g. `Banana` |
+| `status` | string(16) | `todo` / `teaching` / `mastered` |
+| `startedAt` | string(32) | when teaching began |
+| `masteredAt` | string(32) | when it was marked mastered |
+| `updatedAt` | string(32) | last change — this drives merging |
+
+Indexes: `babyId` (the app's only query), `updatedAt` descending (newest
+activity first when you browse the console), and `status`.
+
+Nothing is ever deleted — a reset writes `status: "todo"` rather than removing
+the row, so the history stays intact and `Delete` permission is not needed.
+
+### Watching data flow in
+
+In the Appwrite console open **Databases → babbler → progress**, sort by
+`updatedAt` descending, and you will see each word appear as you tap it in the
+app. Filter by `babyId` to see one child, or by `status` to list everything
+mastered.
+
+---
+
+## Record identity, and the family code
+
+There are no accounts, so the baby's details *are* the key:
+
+```
+name "Sophia" + DOB 2026-01-23                 ->  sophia-2026-01-23
+name "Sophia" + DOB 2026-01-23 + code "hazelnut" ->  bdb085914b160889dd780b93e7c61b73a
+```
+
+Without a family code the id is readable but **guessable** — someone with your
+project id could try `sophia-2026-01-23`. With one, the id is a SHA-256 hash of
+the code plus the name and date of birth, so it cannot be guessed.
+
+The code is typed into the app (during onboarding, or later under **Settings →
+Shared progress**) and stored only on the device. It is deliberately *not* in
+`config.js`, because that file is readable in the page source, which would
+defeat the point. Everyone in the family types the same code once per device.
+
+Changing the code moves you to a different record; it does not migrate data.
+
+> A family code needs a secure context (HTTPS, or localhost) because it uses
+> the browser's `crypto.subtle`. Over plain HTTP the app refuses to hash rather
+> than quietly falling back to a guessable id.
+
+---
+
+## How syncing behaves
 
 - **localStorage stays the source of truth for what you see.** The app renders
   instantly and works with no signal; Appwrite is the shared copy that devices
   reconcile against.
-- **Pulls** happen at startup, whenever the tab regains focus, and once a
-  minute while open. **Pushes** are debounced ~1.2s so a burst of taps becomes
-  one write.
-- **Merging is per-entry last-write-wins**, using an `updatedISO` stamp written
-  on every change. If you mark *ball* mastered on one phone while your partner
-  marks *dog* mastered on another, both survive. If you both change the *same*
-  word, the later change wins — including a reset back to "to start", which is
-  why the timestamp is written even when clearing a status.
+- **Pulls** happen at startup, when the tab regains focus, and once a minute
+  while open. **Pushes** are debounced ~1.2s, and only rows whose timestamp
+  actually changed are written.
+- **Merging is per-entry last-write-wins** on `updatedAt`. If you mark *ball*
+  mastered while your partner marks *dog* mastered, both survive. If you both
+  change the same word, the later change wins — including a reset, which is why
+  the timestamp is written even when clearing a status.
 - **A new device never clobbers the shared record.** The first write for a
-  record always reads the existing document first and merges into it. Without
-  that guard, a freshly onboarded second phone would overwrite everything with
-  its own empty progress — which is exactly what happened the first time this
-  was tested.
-- **Reminder settings stay local.** A banner you dismiss should not go away for
-  everyone else, so `settings` are deliberately excluded from the sync payload.
+  record always reads the existing rows first and merges into them.
+- **Reminder settings stay local.** A banner you dismiss should not go quiet
+  for everyone else, so `settings` are excluded from the sync payload.
 - **Offline changes are kept** and pushed on reconnect.
-
-## Where the data actually lives
-
-One document per baby, in the collection you created:
-
-```json
-{
-  "$id": "sophia-2026-01-23",
-  "name": "Sophia",
-  "birth": "2026-01-23",
-  "updatedAt": "2026-08-01T22:40:11.402Z",
-  "data": "{\"progress\":{\"6::Ba-ba\":{\"status\":\"mastered\",...}},\"phrases\":{},...}"
-}
-```
-
-You can read and edit it directly in the Appwrite console, and the export /
-import buttons in the app's settings still work as a manual backup.
 
 ---
 
 ## Security: read this before you rely on it
 
-There are **no accounts**, which is what makes "just type the name and DOB"
-work. The consequences are worth being explicit about:
+There are no accounts, which is what makes "just type the name and DOB" work.
+Be clear-eyed about what that means:
 
-- The endpoint and project ID are visible in the page source. That is normal
+- The endpoint and project id are visible in the page source. That is normal
   for any browser app.
-- Because the collection is open to the role **Any**, anyone who finds your
-  project could read or write documents in it — and the document ids are
-  guessable, since they are derived from a first name and a date.
-- There is nothing sensitive here: a baby's first name, a date of birth, and
-  which words you have taught. But it is not private, and it is not protected
-  against someone deliberately writing junk into it.
+- The collections grant the role **Any** create/read/update. **A family code
+  stops someone guessing your record id, but it does not stop someone who has
+  your project id from listing the collection and reading every row.** Hashing
+  the id raises the bar; it is not access control.
+- What is actually there: a first name, a date of birth, and which words you
+  have taught. Low stakes — but not private, and not protected against someone
+  deliberately writing junk into it.
 
-For a handful of family and friends, that is a reasonable trade. If you ever
-want it locked down, the options in increasing order of effort:
+For family and a few friends that is a reasonable trade. If you outgrow it:
 
-1. **Add a shared secret to the id.** Mix a family passphrase into `recordId()`
-   so ids stop being guessable. Everyone types the same passphrase once.
-2. **Turn off Create for `Any`** once your records exist, leaving Read and
-   Update. New babies then need adding from the console.
-3. **Use Appwrite anonymous sessions plus a Team**, so only invited devices can
-   read or write. This adds a real login step and is beyond what this app was
-   asked to do.
+1. **Remove `create("any")`** once your records exist, leaving read and update.
+   New babies then have to be added from the console.
+2. **Appwrite anonymous sessions + a Team**, with document-level permissions so
+   only invited devices can read. This adds a real login step.
+3. **Encrypt the payload** with the family code before upload. This genuinely
+   hides the data — but it also makes the console unreadable, which defeats
+   using the database as a source of truth you can browse.
 
 ## Turning it off
 
 Blank out any field in `js/config.js` and the app returns to local-only
-storage, with no requests made. Nothing breaks; existing local progress is
-untouched.
+storage, making no requests. Nothing breaks; local progress is untouched.
 
 ## Troubleshooting
 
 | Symptom | Cause |
 |---|---|
-| Badge stuck on **Sync problem**, CORS error in the console | The site's hostname is not registered under Project settings → Platforms |
+| **Sync problem** badge, CORS error in the console | The hostname is not registered under Project settings → Platforms |
 | `401` / "missing scope" | Collection permissions do not include **Any** for read/create/update |
-| `404` on first load | Normal — no record exists yet; the app creates one immediately |
-| Badge says **Local only** | `js/config.js` still has a blank field |
-| Two phones show different data | Check both show the *same* record id in Settings — a different spelling of the name makes a different record |
+| Badge says **Local only** | A field in `js/config.js` is still blank |
+| "A family code needs HTTPS" | You are on plain HTTP; use HTTPS or localhost, or clear the code |
+| Two phones show different data | Compare the record id in Settings on both — a different name spelling *or a different family code* makes a different record |
+| Rows synced stays 0 | Nothing taught yet; rows appear as you mark words |

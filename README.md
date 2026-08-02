@@ -64,12 +64,16 @@ tapping a speech sound lists every word that practises it, and tapping anything
 in "recently worked on" reopens its card.
 
 **Shared across devices, optionally** — by default everything stays on the one
-device. Point `js/config.js` at an Appwrite database and the baby's **name +
-date of birth becomes the key**: everyone who enters "Sophia" and 23/01/2026
-sees and updates the same record, on any phone, with no accounts or logins.
-Merging is per-entry, so two parents ticking off different words both count.
-See **[SYNC.md](SYNC.md)** — including the security trade-off of having no
-accounts.
+device. Run `npm run setup:appwrite` and the baby's **name + date of birth (+ a
+family code) becomes the key**: everyone entering the same details sees and
+updates one record, on any phone, with no accounts or logins. Merging is
+per-entry, so two parents ticking off different words both count.
+
+The database is designed to be **read**, not just written: a `babies` row per
+child with live counts, and a `progress` row per word taught — month, item,
+status and timestamps — so you can watch progress land in the Appwrite console
+and treat it as the source of truth. See **[SYNC.md](SYNC.md)**, including the
+security trade-off of having no accounts.
 
 **Private by default** — with sync off, nothing leaves the device. Export/import
 your progress as JSON to back it up or move devices either way.
@@ -142,6 +146,12 @@ Regenerate the app icons (pure-Python, no libraries needed):
 npm run icons      # python3 scripts/make_icons.py
 ```
 
+Create the Appwrite database for shared progress (safe to re-run):
+
+```bash
+APPWRITE_ENDPOINT=... APPWRITE_PROJECT=... APPWRITE_API_KEY=... npm run setup:appwrite
+```
+
 ## Deploying it
 
 The app is plain static files and needs no build step to run — but most hosts
@@ -199,6 +209,7 @@ scripts/
   make_icons.py          Dependency-free icon generator
   check-data.js          Curriculum validation (npm run check)
   build.js               Assembles dist/ for static hosts (npm run build)
+  setup-appwrite.js      Creates the sync database + collections (npm run setup:appwrite)
 CONTENT-DESIGN.md        Why the curriculum is built this way + the evidence
 SYNC.md                  Setting up shared cross-device progress in Appwrite
 MIGRATION.md             How to take this from GitHub to the App Store
@@ -223,7 +234,7 @@ App Store checklist, data-model portability notes, and a phased roadmap.
 - Red-flag guidance: when to seek professional advice
 - Photos: let parents snap the real-world object they pointed at
 - Multiple children / profiles
-- A shared passphrase mixed into the record id, if the open collection ever
-  stops feeling comfortable (SYNC.md covers this)
+- Tighter sync access if the open collection ever stops feeling comfortable —
+  anonymous sessions plus a Team (SYNC.md covers the options)
 - Bilingual households mode
 - iCloud sync across a couple's devices

@@ -225,9 +225,15 @@
     const dateInput = el('input', { type: 'date', class: 'field', max: new Date().toISOString().slice(0, 10),
       oninput: (e) => { birthISO = e.target.value; dateInput.classList.remove('field-error'); } });
 
+    let code = '';
+    const codeInput = el('input', { type: 'text', class: 'field', placeholder: 'Family code (optional)',
+      autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false',
+      oninput: (e) => (code = e.target.value) });
+
     const start = el('button', { class: 'btn btn-primary btn-block', onclick: () => {
       if (!birthISO) return dateInput.classList.add('field-error');
       state.baby = { name: name || 'Baby', birthISO };
+      state.familyCode = code.trim();
       state.createdISO = state.createdISO || new Date().toISOString();
       Store.saveState(state);
       render();
@@ -244,7 +250,13 @@
       el('div', { class: 'card onboard-card' },
         el('label', { class: 'label' }, "Your baby's name"), nameInput,
         el('label', { class: 'label' }, 'Date of birth'), dateInput,
-        el('p', { class: 'hint' }, 'We use this to pick the right month plan. Everything stays on your device.'),
+        window.Sync && window.Sync.configured()
+          ? [el('label', { class: 'label' }, 'Family code'), codeInput,
+             el('p', { class: 'hint' },
+               'Everyone in your family types the same code, so only you can find ' +
+               'your record. Leave it blank to share by name and date of birth alone.')]
+          : null,
+        el('p', { class: 'hint' }, 'We use the date of birth to pick the right month plan.'),
         start),
       el('p', { class: 'foot-note' }, `${MONTHS.length} monthly plans · ${MONTHS.reduce((n, m) => n + m.words.length, 0)} words · grounded in speech-development research`));
   }
@@ -803,7 +815,6 @@
   function renderSyncSettings() {
     if (!window.Sync) return null;
     const s = window.Sync.status();
-    const id = window.Sync.recordId(state.baby);
     const [label] = SYNC_LABEL[s.state] || SYNC_LABEL.idle;
 
     if (!window.Sync.configured()) {
@@ -811,9 +822,25 @@
         el('h3', { class: 'how-title' }, '☁️ Shared progress'),
         el('p', { class: 'hint' },
           'Off. Progress is saved on this device only, so other phones will not ' +
-          'see it. To share one record across devices, fill in js/config.js with ' +
-          'your Appwrite details — see SYNC.md.'));
+          'see it. To share one record across devices, run npm run setup:appwrite ' +
+          'and fill in js/config.js — see SYNC.md.'));
     }
+
+    let draft = state.familyCode || '';
+    const codeInput = el('input', {
+      type: 'text', class: 'field', value: draft, placeholder: 'No code set',
+      autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false',
+      oninput: (e) => (draft = e.target.value),
+    });
+    const applyCode = () => {
+      const next = draft.trim();
+      if (next === (state.familyCode || '')) return;
+      state.familyCode = next;
+      window.Sync.reset();          // different code = different record
+      Store.saveState(state);
+      window.Sync.syncNow();
+      render();
+    };
 
     const when = s.lastSyncISO ? new Date(s.lastSyncISO).toLocaleTimeString() : 'not yet';
     return el('div', { class: 'card' },
@@ -821,19 +848,35 @@
         el('div', { class: 'set-label' },
           el('h3', { class: 'how-title set-title' }, '☁️ Shared progress'),
           el('p', { class: 'hint set-hint' },
-            'Anyone who enters the same name and date of birth shares this record.')),
+            'Everyone using the same name, date of birth and family code shares ' +
+            'this record, on any device.')),
         syncBadge()),
       el('div', { class: 'set-sub' },
         el('div', { class: 'rec-row' },
           el('span', { class: 'rec-label' }, 'Record'),
-          el('code', { class: 'rec-id' }, id || '—')),
+          el('code', { class: 'rec-id' }, s.recordId || '—')),
         el('div', { class: 'rec-row' },
           el('span', { class: 'rec-label' }, 'Status'),
           el('span', {}, label)),
         el('div', { class: 'rec-row' },
+          el('span', { class: 'rec-label' }, 'Rows synced'),
+          el('span', {}, String(s.rows || 0))),
+        el('div', { class: 'rec-row' },
           el('span', { class: 'rec-label' }, 'Last synced'),
           el('span', {}, when)),
         s.error ? el('p', { class: 'sync-error' }, s.error) : null,
+
+        el('label', { class: 'label' }, 'Family code'),
+        codeInput,
+        el('p', { class: 'hint' },
+          state.familyCode
+            ? 'Your record id is a hash of this code plus the name and date of ' +
+              'birth, so nobody can find it by guessing. Everyone must use the ' +
+              'same code — change it and you move to a different record.'
+            : 'Without a code the record id is just the name and date of birth, ' +
+              'which is guessable. Set a shared word here on every device to ' +
+              'make it private.'),
+        el('button', { class: 'btn btn-ghost btn-block', onclick: applyCode }, '✓ Apply family code'),
         el('button', { class: 'btn btn-ghost btn-block', onclick: () => window.Sync.syncNow() }, '↻ Sync now'),
         el('p', { class: 'hint' },
           'Reminder settings stay on this device — a banner you dismiss should ' +

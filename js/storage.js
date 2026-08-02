@@ -29,6 +29,9 @@ const DEFAULT_SETTINGS = {
 
 const DEFAULT_STATE = {
   baby: null,          // { name, birthISO }
+  // Optional shared secret that scopes the sync record. Stays on this device
+  // and is never synced — it is the key, so uploading it would defeat it.
+  familyCode: '',
   progress: {},        // word key -> record
   phrases: {},         // phrase key -> record
   history: {},         // dateISO -> word key surfaced that day

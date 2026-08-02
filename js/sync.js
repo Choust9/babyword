@@ -1,20 +1,24 @@
 /*
  * sync.js — shared, cross-device progress via an Appwrite database.
  *
- * The idea: no accounts, no logins. The baby's name + date of birth IS the
- * key. Everyone who types "Sophia" and 23/01/2026 lands on the same document,
- * on any device.
+ * No accounts. The baby's name + date of birth (+ an optional family code) IS
+ * the key, so every device that enters the same details shares one record.
  *
- *   recordId('Sophia', '2026-01-23')  ->  'sophia-2026-01-23'
+ * The database is the source of truth and is designed to be *readable*:
  *
- * localStorage stays the source of truth for rendering (so the app is instant
- * and works offline); Appwrite is the shared copy that devices reconcile
- * against. Every write is debounced and pushed; pulls happen at startup, when
- * the tab regains focus, and on a slow timer.
+ *   babies    one document per baby     — name, birth, live counts
+ *   progress  one document per word     — month, item, status, timestamps
+ *             or phrase taught            (this is the audit trail)
  *
- * Only the shared parts of state are synced — baby, progress and phrases.
- * `settings` stay local on purpose: a reminder dismissed on one parent's phone
- * should not silence it on the other's.
+ * Every tap you make becomes a visible row, not a line inside an opaque JSON
+ * blob. localStorage stays the render source so the app is instant and works
+ * offline; Appwrite is what devices reconcile against.
+ *
+ * Record ids
+ *   without a family code:  sophia-2026-01-23        (readable)
+ *   with one:               b3f9a1c…                 (SHA-256, unguessable)
+ * The family code is typed into the app, never stored in config.js, so it does
+ * not appear in the page source.
  *
  * Uses the REST API directly via fetch so the app keeps zero dependencies.
  */
@@ -23,26 +27,37 @@
   'use strict';
 
   const cfg = window.BABBLER_CONFIG || {};
-  const CONFIGURED = !!(cfg.endpoint && cfg.projectId && cfg.databaseId && cfg.collectionId);
+  const CONFIGURED = !!(
+    cfg.endpoint && cfg.projectId && cfg.databaseId &&
+    cfg.babiesCollectionId && cfg.progressCollectionId
+  );
 
   const PULL_INTERVAL_MS = 60000;   // background refresh while the tab is open
   const PUSH_DEBOUNCE_MS = 1200;    // coalesce bursts of taps into one write
+  const PAGE = 100;                 // Appwrite's max documents per list page
 
   let getState = () => null;
   let applyState = () => {};
-  let listeners = [];
+  const listeners = [];
   let pushTimer = null;
   let started = false;
-  // The record id we have successfully read (or confirmed absent) at least
-  // once. Guards against a fresh device overwriting the shared record with its
-  // own empty progress before it has seen what is already there.
+
+  // The record we have successfully read at least once. Guards a fresh device
+  // from overwriting the shared record before it has seen what is there.
   let pulledFor = null;
+  // key -> updatedISO as last seen on the server, so pushes only write rows
+  // that actually changed.
+  let remoteSeen = {};
+  // Cached id, since hashing is async.
+  let currentId = null;
+  let currentIdInput = null;
 
   const status = {
     state: CONFIGURED ? 'idle' : 'off',  // off|idle|syncing|ok|error|offline
     lastSyncISO: null,
     error: null,
     recordId: null,
+    rows: 0,
   };
 
   function setStatus(patch) {
@@ -50,25 +65,59 @@
     listeners.forEach((fn) => fn(status));
   }
 
-  /* ---- Record identity -------------------------------------------------- */
+  /* ---- Ids -------------------------------------------------------------- */
 
-  // Deterministic, human-readable document id. Appwrite ids allow
-  // [a-zA-Z0-9._-], must not start with a special character, max 36 chars.
-  function recordId(baby) {
-    if (!baby || !baby.birthISO) return null;
-    const slug = String(baby.name || '')
-      .trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 20);
-    return `${slug || 'baby'}-${baby.birthISO}`;
+  async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  /* ---- REST helpers ----------------------------------------------------- */
+  const slug = (s) => String(s || '')
+    .trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 20);
 
-  const docUrl = (id) =>
-    `${cfg.endpoint}/databases/${cfg.databaseId}/collections/${cfg.collectionId}/documents${id ? '/' + id : ''}`;
+  // Appwrite ids: [a-zA-Z0-9._-], must not start with a special char, <=36.
+  // With a family code we hash, so the id gives nothing away; without one we
+  // keep it readable so the console is easy to scan.
+  async function resolveRecordId(state) {
+    const baby = state && state.baby;
+    if (!baby || !baby.birthISO) { currentId = null; currentIdInput = null; return null; }
+
+    const code = (state.familyCode || '').trim().toLowerCase();
+    const input = `${code}|${slug(baby.name)}|${baby.birthISO}`;
+    if (input === currentIdInput && currentId) return currentId;
+
+    let id;
+    if (!code) {
+      id = `${slug(baby.name) || 'baby'}-${baby.birthISO}`;
+    } else if (window.crypto && crypto.subtle) {
+      id = 'b' + (await sha256Hex(input)).slice(0, 32);
+    } else {
+      // crypto.subtle needs a secure context (https or localhost). Rather than
+      // silently sharing a guessable id, refuse and say so.
+      setStatus({ state: 'error', error: 'A family code needs HTTPS (secure context) to hash the record id.' });
+      return null;
+    }
+
+    if (input !== currentIdInput) { pulledFor = null; remoteSeen = {}; }
+    currentIdInput = input;
+    currentId = id;
+    return id;
+  }
+
+  // Progress row ids must also fit in 36 chars, so they are hashed too. The
+  // row's attributes carry the readable month/item, which is what you scan in
+  // the console.
+  const rowId = async (babyId, kind, month, item) =>
+    'p' + (await sha256Hex(`${babyId}|${kind}|${month}|${item}`)).slice(0, 32);
+
+  /* ---- REST ------------------------------------------------------------- */
+
+  const colUrl = (col, id) =>
+    `${cfg.endpoint}/databases/${cfg.databaseId}/collections/${col}/documents${id ? '/' + id : ''}`;
 
   async function api(url, options = {}) {
     const res = await fetch(url, {
@@ -80,7 +129,7 @@
       },
     });
     if (!res.ok) {
-      let detail = `${res.status}`;
+      let detail = `HTTP ${res.status}`;
       try { detail = (await res.json()).message || detail; } catch (_) {}
       const err = new Error(detail);
       err.code = res.status;
@@ -89,13 +138,60 @@
     return res.status === 204 ? null : res.json();
   }
 
-  /* ---- Merge ------------------------------------------------------------ */
+  // Appwrite changed its REST query encoding between versions: newer builds
+  // take JSON objects, older ones take strings like equal("k", ["v"]).
+  // Try JSON, fall back once, and remember which worked.
+  let queryStyle = null;
+  function encodeQueries(babyId, offset, style) {
+    const q = style === 'legacy'
+      ? [`equal("babyId", ["${babyId}"])`, `limit(${PAGE})`, `offset(${offset})`]
+      : [
+          JSON.stringify({ method: 'equal', attribute: 'babyId', values: [babyId] }),
+          JSON.stringify({ method: 'limit', values: [PAGE] }),
+          JSON.stringify({ method: 'offset', values: [offset] }),
+        ];
+    return q.map((s) => `queries[]=${encodeURIComponent(s)}`).join('&');
+  }
 
-  // Every progress record carries `updatedISO`, so merging is a per-entry
-  // last-write-wins. That keeps a reset (which clears the other timestamps)
-  // from being resurrected by a stale copy.
-  const touchedAt = (rec) =>
-    (rec && (rec.updatedISO || rec.masteredISO || rec.startedISO)) || '';
+  async function listRows(babyId) {
+    const out = [];
+    for (let offset = 0; ; offset += PAGE) {
+      let page;
+      try {
+        page = await api(`${colUrl(cfg.progressCollectionId)}?${encodeQueries(babyId, offset, queryStyle)}`);
+        queryStyle = queryStyle || 'json';
+      } catch (err) {
+        if (queryStyle === null && err.code === 400) {
+          queryStyle = 'legacy';
+          page = await api(`${colUrl(cfg.progressCollectionId)}?${encodeQueries(babyId, offset, 'legacy')}`);
+        } else {
+          throw err;
+        }
+      }
+      const docs = page.documents || [];
+      out.push(...docs);
+      if (docs.length < PAGE) return out;
+    }
+  }
+
+  /* ---- Shape conversion ------------------------------------------------- */
+
+  const keyOf = (month, item) => `${month}::${item}`;
+
+  // Rows -> the two progress buckets the app renders from.
+  function rowsToBuckets(rows) {
+    const progress = {};
+    const phrases = {};
+    for (const r of rows) {
+      const rec = { status: r.status, updatedISO: r.updatedAt || '' };
+      if (r.startedAt) rec.startedISO = r.startedAt;
+      if (r.masteredAt) rec.masteredISO = r.masteredAt;
+      (r.kind === 'phrase' ? phrases : progress)[keyOf(r.month, r.item)] = rec;
+    }
+    return { progress, phrases };
+  }
+
+  const touchedAt = (rec) => (rec && (rec.updatedISO || rec.masteredISO || rec.startedISO)) || '';
 
   function mergeBucket(mine = {}, theirs = {}) {
     const out = { ...mine };
@@ -105,101 +201,138 @@
     return out;
   }
 
-  function mergeStates(local, remote) {
-    if (!remote) return local;
-    return {
-      ...local,
-      // Keep whichever profile was created first; they describe the same baby.
-      createdISO: [local.createdISO, remote.createdISO].filter(Boolean).sort()[0] || local.createdISO,
-      progress: mergeBucket(local.progress, remote.progress),
-      phrases: mergeBucket(local.phrases, remote.phrases),
-    };
+  function countStatuses(bucket = {}) {
+    let teaching = 0, mastered = 0;
+    for (const rec of Object.values(bucket)) {
+      if (rec.status === 'teaching') teaching++;
+      else if (rec.status === 'mastered') mastered++;
+    }
+    return { teaching, mastered };
   }
 
-  /* ---- Pull / push ------------------------------------------------------ */
-
-  function sharedPayload(state) {
-    return {
-      progress: state.progress || {},
-      phrases: state.phrases || {},
-      createdISO: state.createdISO || null,
-    };
-  }
+  /* ---- Pull ------------------------------------------------------------- */
 
   async function pull({ quiet = false } = {}) {
     const state = getState();
-    const id = recordId(state && state.baby);
-    if (!CONFIGURED || !id) return null;
+    if (!CONFIGURED || !state) return null;
+    const id = await resolveRecordId(state);
+    if (!id) return null;
     if (!navigator.onLine) { setStatus({ state: 'offline' }); return null; }
 
     if (!quiet) setStatus({ state: 'syncing', recordId: id });
     try {
-      const doc = await api(docUrl(id));
-      let remote = null;
-      try { remote = JSON.parse(doc.data || '{}'); } catch (_) { remote = null; }
+      const rows = await listRows(id);
+      const remote = rowsToBuckets(rows);
 
+      remoteSeen = {};
+      for (const r of rows) remoteSeen[`${r.kind}|${keyOf(r.month, r.item)}`] = r.updatedAt || '';
       pulledFor = id;
-      const merged = mergeStates(state, remote);
-      // Only hand the merge back if it actually changed something. Applying
-      // unconditionally would save -> schedule a push on every poll, so the
-      // two devices would ping-pong writes forever with nothing to say.
-      if (JSON.stringify(sharedPayload(merged)) !== JSON.stringify(sharedPayload(state))) {
-        applyState(merged);
-      }
-      setStatus({ state: 'ok', lastSyncISO: new Date().toISOString(), error: null, recordId: id });
+
+      const merged = {
+        ...state,
+        progress: mergeBucket(state.progress, remote.progress),
+        phrases: mergeBucket(state.phrases, remote.phrases),
+      };
+      // Only apply a merge that changed something, or every poll would save,
+      // schedule a push, and the devices would write to each other forever.
+      const same =
+        JSON.stringify(merged.progress) === JSON.stringify(state.progress) &&
+        JSON.stringify(merged.phrases) === JSON.stringify(state.phrases);
+      if (!same) applyState(merged);
+
+      setStatus({ state: 'ok', lastSyncISO: new Date().toISOString(), error: null, recordId: id, rows: rows.length });
       return merged;
     } catch (err) {
-      if (err.code === 404) {
-        // No shared record yet — this device creates it.
-        pulledFor = id;
-        setStatus({ state: 'ok', lastSyncISO: new Date().toISOString(), error: null, recordId: id });
-        await push({ force: true });
-        return null;
-      }
       setStatus({ state: 'error', error: err.message, recordId: id });
       return null;
     }
   }
 
+  /* ---- Push ------------------------------------------------------------- */
+
+  async function upsert(col, id, data) {
+    try {
+      await api(colUrl(col, id), { method: 'PATCH', body: JSON.stringify({ data }) });
+    } catch (err) {
+      if (err.code !== 404) throw err;
+      try {
+        await api(colUrl(col), { method: 'POST', body: JSON.stringify({ documentId: id, data }) });
+      } catch (createErr) {
+        // Another device created it in the gap — patch instead.
+        if (createErr.code === 409) {
+          await api(colUrl(col, id), { method: 'PATCH', body: JSON.stringify({ data }) });
+        } else {
+          throw createErr;
+        }
+      }
+    }
+  }
+
   async function push({ force = false } = {}) {
     const state = getState();
-    const id = recordId(state && state.baby);
-    if (!CONFIGURED || !id) return;
+    if (!CONFIGURED || !state || !state.baby) return;
+    const id = await resolveRecordId(state);
+    if (!id) return;
     if (!navigator.onLine) { setStatus({ state: 'offline' }); return; }
 
-    // First write for this record on this device? Read the shared copy first
-    // and merge, so we add to it rather than replace it. This is what stops a
-    // second phone, freshly onboarded, from wiping the first phone's progress.
+    // Never write before reading: a freshly onboarded device must merge into
+    // the shared record rather than replace it.
     if (!force && pulledFor !== id) {
       await pull({ quiet: true });
-      if (pulledFor !== id) return;   // pull failed; try again on the next tick
+      if (pulledFor !== id) return;      // pull failed; retry on the next tick
       return push({ force: true });
     }
 
-    const data = {
-      name: (state.baby.name || '').slice(0, 128),
-      birth: state.baby.birthISO,
-      data: JSON.stringify(sharedPayload(state)),
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (!force) setStatus({ state: 'syncing', recordId: id });
+    const now = new Date().toISOString();
     try {
-      await api(docUrl(id), { method: 'PATCH', body: JSON.stringify({ data }) });
-      setStatus({ state: 'ok', lastSyncISO: new Date().toISOString(), error: null, recordId: id });
-    } catch (err) {
-      if (err.code === 404) {
-        try {
-          await api(docUrl(), { method: 'POST', body: JSON.stringify({ documentId: id, data }) });
-          setStatus({ state: 'ok', lastSyncISO: new Date().toISOString(), error: null, recordId: id });
-          return;
-        } catch (createErr) {
-          // 409 means another device created it between our GET and POST.
-          if (createErr.code === 409) return push({ force: true });
-          setStatus({ state: 'error', error: createErr.message, recordId: id });
-          return;
+      setStatus({ state: 'syncing', recordId: id });
+
+      // One row per changed word/phrase.
+      let written = 0;
+      for (const [kind, bucket] of [['word', state.progress || {}], ['phrase', state.phrases || {}]]) {
+        for (const [key, rec] of Object.entries(bucket)) {
+          const seenKey = `${kind}|${key}`;
+          const stamp = touchedAt(rec);
+          if (remoteSeen[seenKey] === stamp) continue;   // unchanged
+
+          const [month, ...rest] = key.split('::');
+          const item = rest.join('::');
+          await upsert(cfg.progressCollectionId, await rowId(id, kind, month, item), {
+            babyId: id,
+            kind,
+            month: Number(month),
+            item,
+            status: rec.status || 'todo',
+            startedAt: rec.startedISO || null,
+            masteredAt: rec.masteredISO || null,
+            updatedAt: stamp || now,
+          });
+          remoteSeen[seenKey] = stamp;
+          written++;
         }
       }
+
+      // The baby row carries live counts so the console shows progress at a
+      // glance without opening every row.
+      const w = countStatuses(state.progress);
+      const p = countStatuses(state.phrases);
+      await upsert(cfg.babiesCollectionId, id, {
+        name: (state.baby.name || '').slice(0, 128),
+        birth: state.baby.birthISO,
+        createdAt: state.createdISO || now,
+        updatedAt: now,
+        wordsTeaching: w.teaching,
+        wordsMastered: w.mastered,
+        phrasesTeaching: p.teaching,
+        phrasesMastered: p.mastered,
+      });
+
+      setStatus({
+        state: 'ok', lastSyncISO: now, error: null, recordId: id,
+        rows: Object.keys(remoteSeen).length,
+      });
+      return written;
+    } catch (err) {
       setStatus({ state: 'error', error: err.message, recordId: id });
     }
   }
@@ -210,8 +343,6 @@
     pushTimer = setTimeout(() => push(), PUSH_DEBOUNCE_MS);
   }
 
-  // Pull, then push, so a device that has been offline both receives and
-  // contributes. Used at startup and by the manual "Sync now" button.
   async function syncNow() {
     await pull();
     await push();
@@ -235,14 +366,14 @@
   window.Sync = {
     configured: () => CONFIGURED,
     status: () => status,
-    recordId,
+    resolveRecordId,
     start,
     pull,
     push,
     syncNow,
     schedulePush,
+    // Called when the family code changes: forget what we knew and re-sync.
+    reset: () => { pulledFor = null; remoteSeen = {}; currentId = null; currentIdInput = null; },
     onStatus: (fn) => { listeners.push(fn); },
-    // exported for tests
-    _merge: mergeStates,
   };
 })();
