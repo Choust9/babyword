@@ -998,6 +998,9 @@
           el('div', {},
             el('div', { class: 'about-name' }, 'Babblr'),
             el('div', { class: 'about-tag' }, 'Baby word of the day'))),
+        el('div', { class: 'rec-row' },
+          el('span', { class: 'rec-label' }, 'Version'),
+          el('code', { class: 'rec-id' }, window.BABBLR_VERSION || 'unknown')),
         el('p', { class: 'hint' },
           `${MONTHS.length} monthly plans · ${MONTHS.reduce((n, m) => n + m.words.length, 0)} words · ` +
           `${MONTHS.reduce((n, m) => n + (m.phrases || []).length, 0)} phrase patterns.`),
@@ -1040,6 +1043,36 @@
   });
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+    // When a new worker takes control the page is running the old assets, so
+    // reload once to pick up the new build. The guard stops a reload loop.
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+        // Ask straight away rather than waiting for the browser's own check,
+        // and again whenever the app is brought back to the foreground.
+        reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) reg.update().catch(() => {});
+        });
+        // A worker sitting in "waiting" would otherwise only activate after
+        // every tab closed; tell it to take over now.
+        if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+        reg.addEventListener('updatefound', () => {
+          const next = reg.installing;
+          if (!next) return;
+          next.addEventListener('statechange', () => {
+            if (next.state === 'installed' && navigator.serviceWorker.controller) {
+              next.postMessage('skipWaiting');
+            }
+          });
+        });
+      }).catch(() => {});
+    });
   }
 })();

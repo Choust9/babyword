@@ -181,6 +181,22 @@ repo root (`./`) as static files — that works too.
 > have. Either set the framework to Static, or pull this branch, which now
 > provides the `build` script.
 
+### "I deployed but nothing changed"
+
+Check **Settings → About → Version** against `js/version.js`. If the device is
+showing an older number, it is serving a cached build, not a stale deploy.
+
+The service worker is **network-first**, so a new deploy normally lands on the
+next reload. The exception is a device that still has the pre-2.1.0 worker
+installed: that one was cache-first, so it answers from its own cache before it
+can learn there is a new version. Those devices need **two reloads** — the first
+installs the new worker, the second serves the new files. On an iPhone home
+screen, close the app fully and reopen it twice, or remove and re-add it.
+
+Bump the version in **both** `js/version.js` and `service-worker.js` on every
+release; `npm run check` fails if they drift, because a stale cache name is
+exactly what stops clients updating.
+
 ## Add it to an iPhone home screen (today, no App Store)
 
 1. Host the folder somewhere over HTTPS (GitHub Pages, Netlify, Vercel — all

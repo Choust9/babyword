@@ -19,6 +19,30 @@ const { PHONEMES, TECHNIQUES } = require('../js/phonics.js');
 const errors = [];
 const warn = [];
 
+// The service worker's cache name is derived from APP_VERSION. If it drifts
+// from js/version.js the cache stops changing between releases and clients
+// keep serving the old build — the exact failure this check exists to prevent.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..');
+  const readVersion = (file, re) => {
+    const m = fs.readFileSync(path.join(root, file), 'utf8').match(re);
+    return m ? m[1] : null;
+  };
+  const appV = readVersion('js/version.js', /window\.BABBLR_VERSION\s*=\s*'([^']+)'/);
+  const swV = readVersion('service-worker.js', /const APP_VERSION\s*=\s*'([^']+)'/);
+  const pkgV = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+  if (!appV) errors.push('js/version.js: could not read BABBLR_VERSION');
+  if (!swV) errors.push('service-worker.js: could not read APP_VERSION');
+  if (appV && swV && appV !== swV) {
+    errors.push(`version mismatch: js/version.js is ${appV} but service-worker.js is ${swV} — they must match or clients will not update`);
+  }
+  if (appV && pkgV && appV !== pkgV) {
+    warn.push(`package.json version ${pkgV} differs from app version ${appV}`);
+  }
+}
+
 // American symbols that must not appear in a British transcription.
 // /ɪr/ is excluded when followed by ə (that's the British NEAR diphthong /ɪə/).
 const AMERICAN = [
