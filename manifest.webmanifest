@@ -6,8 +6,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fdf6f0",
-  "theme_color": "#ff8a5c",
+  "background_color": "#fffef2",
+  "theme_color": "#c9aa7c",
   "categories": ["education", "parenting", "kids"],
   "icons": [
     { "src": "./icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },

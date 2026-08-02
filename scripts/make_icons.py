@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Babblr's app icons with no third-party dependencies (stdlib zlib).
 
-Design: a warm sun->coral gradient rounded square holding a baby's head (circle
+Design: a soft cream->sand gradient rounded square holding a baby's head (circle
 plus a curl of hair) with a speech bubble rising from it, three dots inside the
 bubble standing for the babble/word of the day.
 
@@ -15,10 +15,12 @@ import struct, zlib, math, os
 OUT = os.path.join(os.path.dirname(__file__), "..", "icons")
 os.makedirs(OUT, exist_ok=True)
 
-TOP = (255, 207, 92)     # sun
-BOT = (255, 138, 92)     # coral
-DOT = (124, 108, 240)    # accent purple
-WHITE = (255, 255, 255)
+# Brand swatches: cream at the top fading into sand, with the babble dots in
+# the deep caramel so they stay legible against the white bubble.
+TOP = (246, 226, 190)    # cream
+BOT = (201, 170, 124)    # sand
+DOT = (150, 114, 63)     # caramel
+WHITE = (255, 254, 242)  # ivory
 
 
 def lerp(a, b, t):

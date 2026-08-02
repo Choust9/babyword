@@ -196,21 +196,21 @@
     const svg = svgEl('svg', { viewBox: '0 0 100 100', width: size, height: size, class: 'logo-svg', 'aria-hidden': 'true' });
     const defs = svgEl('defs');
     const grad = svgEl('linearGradient', { id: gid, x1: '0', y1: '0', x2: '0', y2: '1' });
-    grad.appendChild(svgEl('stop', { offset: '0', 'stop-color': '#ffcf5c' }));
-    grad.appendChild(svgEl('stop', { offset: '1', 'stop-color': '#ff8a5c' }));
+    grad.appendChild(svgEl('stop', { offset: '0', 'stop-color': '#f6e2be' }));
+    grad.appendChild(svgEl('stop', { offset: '1', 'stop-color': '#c9aa7c' }));
     defs.appendChild(grad);
     svg.appendChild(defs);
 
     svg.appendChild(svgEl('rect', { width: 100, height: 100, rx: 30, fill: `url(#${gid})` }));
     // Speech bubble: body, then the tail pointing down-left at the baby.
-    svg.appendChild(svgEl('rect', { x: 42, y: 13, width: 48, height: 34, rx: 11, fill: '#fff' }));
-    svg.appendChild(svgEl('polygon', { points: '50,44 46,55 60,46', fill: '#fff' }));
+    svg.appendChild(svgEl('rect', { x: 42, y: 13, width: 48, height: 34, rx: 11, fill: '#fffef2' }));
+    svg.appendChild(svgEl('polygon', { points: '50,44 46,55 60,46', fill: '#fffef2' }));
     // Baby: head, curl, ear.
-    svg.appendChild(svgEl('circle', { cx: 32, cy: 71.5, r: 16.5, fill: '#fff' }));
-    svg.appendChild(svgEl('circle', { cx: 32.5, cy: 55.2, r: 4.9, fill: '#fff' }));
-    svg.appendChild(svgEl('circle', { cx: 15.8, cy: 72.2, r: 5, fill: '#fff' }));
+    svg.appendChild(svgEl('circle', { cx: 32, cy: 71.5, r: 16.5, fill: '#fffef2' }));
+    svg.appendChild(svgEl('circle', { cx: 32.5, cy: 55.2, r: 4.9, fill: '#fffef2' }));
+    svg.appendChild(svgEl('circle', { cx: 15.8, cy: 72.2, r: 5, fill: '#fffef2' }));
     // The babble.
-    for (const cx of [55, 66, 77]) svg.appendChild(svgEl('circle', { cx, cy: 30, r: 3.7, fill: '#7c6cf0' }));
+    for (const cx of [55, 66, 77]) svg.appendChild(svgEl('circle', { cx, cy: 30, r: 3.7, fill: '#96723f' }));
     return svg;
   }
 

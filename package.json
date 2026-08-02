@@ -1,6 +1,6 @@
 {
   "name": "babblr",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "A daily, age-appropriate word to teach your baby, with British English phonics coaching and progress tracking.",
   "private": true,
   "scripts": {

@@ -19,21 +19,24 @@
  * `npm run check` enforces it.
  */
 
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 const CACHE_VERSION = `babblr-${APP_VERSION}`;
 
+// index.html requests its assets with ?v=APP_VERSION, so precache the same
+// URLs — otherwise the offline fallback would hold copies nothing asks for.
+const V = `?v=${APP_VERSION}`;
 const ASSETS = [
   './',
   './index.html',
-  './css/styles.css',
-  './js/version.js',
-  './js/config.js',
-  './js/phonics.js',
-  './js/data.js',
-  './js/storage.js',
-  './js/sync.js',
-  './js/app.js',
-  './manifest.webmanifest',
+  `./css/styles.css${V}`,
+  `./js/version.js${V}`,
+  `./js/config.js${V}`,
+  `./js/phonics.js${V}`,
+  `./js/data.js${V}`,
+  `./js/storage.js${V}`,
+  `./js/sync.js${V}`,
+  `./js/app.js${V}`,
+  `./manifest.webmanifest${V}`,
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

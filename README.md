@@ -181,6 +181,17 @@ repo root (`./`) as static files — that works too.
 > have. Either set the framework to Static, or pull this branch, which now
 > provides the `build` script.
 
+### Is it the deploy, or the cache?
+
+Open **`https://<your-site>/js/version.js`** directly in a browser. That URL
+answers the question in one step:
+
+- It shows `window.BABBLR_VERSION = '2.3.0'` → the **server has the new build**,
+  so anything old you are seeing is a cached copy in the browser. Reload the
+  app and wait a few seconds; it reloads itself onto the new build.
+- It **404s or shows an older number** → the **deploy did not land**. Check the
+  build log, the branch the site tracks, and that the output directory is `dist`.
+
 ### "I deployed but nothing changed"
 
 Check **Settings → About → Version** against `js/version.js`. If the device is

@@ -9,4 +9,4 @@
  * — the two must move together or the cache name stops changing between
  * releases and clients never update.
  */
-window.BABBLR_VERSION = '2.2.0';
+window.BABBLR_VERSION = '2.3.0';
